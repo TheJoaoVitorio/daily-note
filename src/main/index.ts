@@ -34,7 +34,7 @@ function createWindow() {
 
   const devUrl = process.env.VITE_DEV_SERVER_URL
   if (devUrl) {
-    win.loadURL(devUrl)
+    win.loadURL(`${devUrl}src/renderer/index.html`)
   } else {
     win.loadFile(join(process.env.DIST || '', 'src/renderer/index.html'))
   }
