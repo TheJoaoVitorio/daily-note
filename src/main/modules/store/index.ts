@@ -1,62 +1,136 @@
 import { app, ipcMain } from 'electron'
 import { join } from 'path'
-import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'fs'
-import type { StoreData, Task } from '../../../shared/types'
+import { mkdirSync, existsSync } from 'fs'
+import Database from 'better-sqlite3'
+import type { StoreData, Task, ActivityDay } from '../../../shared/types'
 
-const STORE_PATH = join(app.getPath('userData'), 'store.json')
-
-const DEFAULT_DATA: StoreData = {
-  tasks: [],
-  focusMinutes: 25,
-  streak: 0
-}
+let db: ReturnType<typeof Database>
 
 export function setupStore() {
-  // Initialize file if not exists
-  if (!existsSync(STORE_PATH)) {
-    mkdirSync(app.getPath('userData'), { recursive: true })
-    writeFileSync(STORE_PATH, JSON.stringify(DEFAULT_DATA, null, 2))
+  const userDataPath = app.getPath('userData')
+  if (!existsSync(userDataPath)) {
+    mkdirSync(userDataPath, { recursive: true })
+  }
+
+  const dbPath = join(userDataPath, 'daily-notch.sqlite')
+  db = new Database(dbPath)
+
+  // Init tables
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS tasks (
+      id TEXT PRIMARY KEY,
+      title TEXT NOT NULL,
+      completed INTEGER DEFAULT 0,
+      estimatedMinutes INTEGER DEFAULT 25,
+      date TEXT NOT NULL,
+      createdAt INTEGER NOT NULL,
+      completedAt INTEGER
+    );
+    CREATE TABLE IF NOT EXISTS settings (
+      key TEXT PRIMARY KEY,
+      value TEXT NOT NULL
+    );
+    CREATE TABLE IF NOT EXISTS activity (
+      date TEXT PRIMARY KEY,
+      completedCount INTEGER DEFAULT 0
+    );
+  `)
+
+  // Initialize settings if empty
+  const getSetting = db.prepare('SELECT value FROM settings WHERE key = ?')
+  if (!getSetting.get('streak')) {
+    db.prepare("INSERT INTO settings (key, value) VALUES ('streak', '0')").run()
+    db.prepare("INSERT INTO settings (key, value) VALUES ('focusMinutes', '25')").run()
   }
 
   // Set up IPC handlers
-  ipcMain.handle('store:getData', () => readData())
+  ipcMain.handle('store:getData', (_, date: string) => readData(date))
   ipcMain.handle('store:addTask', (_, task: Omit<Task, 'id' | 'createdAt'>) => addTask(task))
   ipcMain.handle('store:toggleTask', (_, id: string) => toggleTask(id))
+  ipcMain.handle('store:deleteTask', (_, id: string) => deleteTask(id))
 }
 
-export function readData(): StoreData {
-  try {
-    if (!existsSync(STORE_PATH)) return DEFAULT_DATA
-    const data = readFileSync(STORE_PATH, 'utf-8')
-    return JSON.parse(data)
-  } catch (error) {
-    return DEFAULT_DATA
+export function readData(targetDate: string): StoreData {
+  if (!db) return { tasks: [], activity: [], focusMinutes: 25, streak: 0 }
+
+  const tasks = db.prepare('SELECT * FROM tasks WHERE date = ? ORDER BY createdAt ASC').all(targetDate) as any[]
+  const mappedTasks: Task[] = tasks.map(t => ({
+    ...t,
+    completed: t.completed === 1
+  }))
+
+  const activity = db.prepare('SELECT date, completedCount FROM activity ORDER BY date DESC LIMIT 60').all() as ActivityDay[]
+
+  const streakRow = db.prepare("SELECT value FROM settings WHERE key = 'streak'").get() as any
+  const focusRow = db.prepare("SELECT value FROM settings WHERE key = 'focusMinutes'").get() as any
+
+  return {
+    tasks: mappedTasks,
+    activity,
+    streak: streakRow ? parseInt(streakRow.value) : 0,
+    focusMinutes: focusRow ? parseInt(focusRow.value) : 25
   }
 }
 
-export function writeData(data: StoreData) {
-  writeFileSync(STORE_PATH, JSON.stringify(data, null, 2))
-}
-
 export function addTask(taskData: Omit<Task, 'id' | 'createdAt'>): Task {
-  const data = readData()
   const newTask: Task = {
     ...taskData,
     id: Math.random().toString(36).substring(2, 9),
     createdAt: Date.now()
   }
-  data.tasks.push(newTask)
-  writeData(data)
+
+  db.prepare(`
+    INSERT INTO tasks (id, title, completed, estimatedMinutes, date, createdAt)
+    VALUES (@id, @title, @completed, @estimatedMinutes, @date, @createdAt)
+  `).run({
+    ...newTask,
+    completed: newTask.completed ? 1 : 0
+  })
+
   return newTask
 }
 
 export function toggleTask(id: string): Task | null {
-  const data = readData()
-  const task = data.tasks.find(t => t.id === id)
-  if (task) {
-    task.completed = !task.completed
-    writeData(data)
-    return task
+  const taskRow = db.prepare('SELECT * FROM tasks WHERE id = ?').get(id) as any
+  if (!taskRow) return null
+
+  const wasCompleted = taskRow.completed === 1
+  const isCompleted = !wasCompleted
+
+  db.prepare('UPDATE tasks SET completed = ?, completedAt = ? WHERE id = ?').run(
+    isCompleted ? 1 : 0,
+    isCompleted ? Date.now() : null,
+    id
+  )
+
+  // Update activity count
+  const date = taskRow.date
+  if (isCompleted) {
+    db.prepare(`
+      INSERT INTO activity (date, completedCount) VALUES (?, 1)
+      ON CONFLICT(date) DO UPDATE SET completedCount = completedCount + 1
+    `).run(date)
+  } else {
+    db.prepare(`
+      UPDATE activity SET completedCount = MAX(0, completedCount - 1) WHERE date = ?
+    `).run(date)
   }
-  return null
+
+  const updatedRow = db.prepare('SELECT * FROM tasks WHERE id = ?').get(id) as any
+  return {
+    ...updatedRow,
+    completed: updatedRow.completed === 1
+  }
+}
+
+export function deleteTask(id: string) {
+  const taskRow = db.prepare('SELECT * FROM tasks WHERE id = ?').get(id) as any
+  if (!taskRow) return false
+
+  if (taskRow.completed === 1) {
+    db.prepare('UPDATE activity SET completedCount = MAX(0, completedCount - 1) WHERE date = ?').run(taskRow.date)
+  }
+  
+  db.prepare('DELETE FROM tasks WHERE id = ?').run(id)
+  return true
 }
