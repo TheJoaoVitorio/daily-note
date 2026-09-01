@@ -39,7 +39,12 @@ function createWindow() {
   }
 }
 
-app.whenReady().then(createWindow)
+import { setupTray } from './modules/tray'
+
+app.whenReady().then(() => {
+  createWindow()
+  setupTray()
+})
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit()
