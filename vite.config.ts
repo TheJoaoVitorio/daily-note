@@ -34,7 +34,7 @@ export default defineConfig({
     outDir: 'dist',
     rollupOptions: {
       input: {
-        main: resolve(__dirname, 'src/renderer/index.html'),
+        main: resolve(import.meta.dirname, 'src/renderer/index.html'),
       },
     },
   },
