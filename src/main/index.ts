@@ -41,9 +41,11 @@ function createWindow() {
 
 import { setupTray } from './modules/tray'
 import { setupStore } from './modules/store'
+import { setupTimer } from './modules/timer'
 
 app.whenReady().then(() => {
   setupStore()
+  setupTimer()
   createWindow()
   setupTray()
 })

@@ -5,6 +5,8 @@ function App() {
   const [isHovered, setIsHovered] = useState(false)
   const [tasks, setTasks] = useState<Task[]>([])
   const [streak, setStreak] = useState(0)
+  const [timeRemaining, setTimeRemaining] = useState(0)
+  const [isRunning, setIsRunning] = useState(false)
 
   useEffect(() => {
     // Load initial data
@@ -13,8 +15,23 @@ function App() {
         setTasks(data.tasks)
         setStreak(data.streak)
       })
+
+      window.electron.ipcRenderer.on('timer:tick', (data: { isRunning: boolean, timeRemaining: number }) => {
+        setIsRunning(data.isRunning)
+        setTimeRemaining(data.timeRemaining)
+      })
     }
   }, [])
+
+  const formatTime = (seconds: number) => {
+    const m = Math.floor(seconds / 60).toString().padStart(2, '0')
+    const s = (seconds % 60).toString().padStart(2, '0')
+    return `${m}:${s}`
+  }
+
+  const handleStartTimer = () => {
+    if (window.electron) window.electron.ipcRenderer.invoke('timer:start', 25)
+  }
 
   return (
     <div className="w-full h-full flex justify-center pt-2 select-none">
@@ -29,10 +46,15 @@ function App() {
         {/* Header / Collapsed State */}
         <div className="flex items-center justify-between px-4 h-12 shrink-0">
           <div className="flex items-center space-x-2 text-white">
-            <div className="w-3 h-3 rounded-full bg-green-400"></div>
-            <span className="text-sm font-medium">Ready</span>
+            <div className={`w-3 h-3 rounded-full ${isRunning ? 'bg-red-400 animate-pulse' : 'bg-green-400'}`}></div>
+            <span className="text-sm font-medium">{isRunning ? 'Focusing...' : 'Ready'}</span>
           </div>
-          <div className="text-white/60 text-xs">00:00</div>
+          <div className="flex items-center space-x-3">
+            {!isRunning && isHovered && (
+               <button onClick={handleStartTimer} className="text-xs bg-white/20 hover:bg-white/30 px-2 py-1 rounded text-white" style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}>Start 25m</button>
+            )}
+            <div className="text-white/60 text-xs font-mono">{formatTime(timeRemaining)}</div>
+          </div>
         </div>
 
         {/* Expanded Dashboard */}
