@@ -40,8 +40,10 @@ function createWindow() {
 }
 
 import { setupTray } from './modules/tray'
+import { setupStore } from './modules/store'
 
 app.whenReady().then(() => {
+  setupStore()
   createWindow()
   setupTray()
 })

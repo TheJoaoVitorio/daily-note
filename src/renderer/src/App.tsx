@@ -1,7 +1,20 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import type { Task, StoreData } from '../../shared/types'
 
 function App() {
   const [isHovered, setIsHovered] = useState(false)
+  const [tasks, setTasks] = useState<Task[]>([])
+  const [streak, setStreak] = useState(0)
+
+  useEffect(() => {
+    // Load initial data
+    if (window.electron) {
+      window.electron.ipcRenderer.invoke('store:getData').then((data: StoreData) => {
+        setTasks(data.tasks)
+        setStreak(data.streak)
+      })
+    }
+  }, [])
 
   return (
     <div className="w-full h-full flex justify-center pt-2 select-none">
@@ -30,13 +43,26 @@ function App() {
           style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
         >
           <div className="border-t border-white/10 pt-4 flex-1 flex gap-4">
-            <div className="flex-1 bg-white/5 rounded-xl p-3">
+            <div className="flex-1 bg-white/5 rounded-xl p-3 flex flex-col">
               <h3 className="text-xs text-white/50 uppercase font-semibold mb-2">To Do</h3>
-              <div className="text-sm">No tasks for today.</div>
+              <div className="flex-1 overflow-y-auto">
+                {tasks.length === 0 ? (
+                  <div className="text-sm">No tasks for today.</div>
+                ) : (
+                  <ul className="space-y-2">
+                    {tasks.map(t => (
+                      <li key={t.id} className="text-sm flex items-center space-x-2">
+                        <input type="checkbox" checked={t.completed} readOnly className="rounded border-white/20 bg-white/10" />
+                        <span className={t.completed ? 'line-through text-white/50' : ''}>{t.title}</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
             </div>
             <div className="flex-1 bg-white/5 rounded-xl p-3">
               <h3 className="text-xs text-white/50 uppercase font-semibold mb-2">Activity</h3>
-              <div className="text-xs text-green-400">🔥 0 Day Streak</div>
+              <div className="text-xs text-green-400">🔥 {streak} Day Streak</div>
             </div>
           </div>
         </div>
