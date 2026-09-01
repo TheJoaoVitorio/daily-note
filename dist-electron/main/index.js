@@ -799,10 +799,10 @@ var win = null;
 function createWindow() {
 	const { screen } = __require("electron");
 	const { width } = screen.getPrimaryDisplay().workAreaSize;
-	const windowWidth = 400;
+	const windowWidth = 800;
 	win = new BrowserWindow({
 		width: windowWidth,
-		height: 400,
+		height: 600,
 		x: Math.floor(width / 2 - windowWidth / 2),
 		y: 0,
 		frame: false,
