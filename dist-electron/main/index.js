@@ -5,7 +5,7 @@ import { existsSync as u, mkdirSync as d, readFileSync as f, writeFileSync as p 
 //#region \0rolldown/runtime.js
 var m = /* @__PURE__ */ e(import.meta.url), h = null;
 function g() {
-	let e = l(process.env.VITE_PUBLIC || l(import.meta.dirname, "../../public"), "vite.svg"), t = c.createFromPath(e);
+	let e = l(process.env.VITE_PUBLIC || l(import.meta.dirname, "../../public"), "favicon.svg"), t = c.createFromPath(e);
 	h = new i(t);
 	let r = n.buildFromTemplate([
 		{
