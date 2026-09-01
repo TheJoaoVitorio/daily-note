@@ -42,16 +42,23 @@ function createWindow() {
 import { setupTray } from './modules/tray'
 import { setupStore } from './modules/store'
 import { setupTimer } from './modules/timer'
+import { setupShortcuts, cleanupShortcuts } from './modules/shortcuts'
 
 app.whenReady().then(() => {
   setupStore()
   setupTimer()
+  setupShortcuts()
   createWindow()
   setupTray()
 })
 
 app.on('window-all-closed', () => {
+  cleanupShortcuts()
   if (process.platform !== 'darwin') app.quit()
+})
+
+app.on('will-quit', () => {
+  cleanupShortcuts()
 })
 
 app.on('activate', () => {
