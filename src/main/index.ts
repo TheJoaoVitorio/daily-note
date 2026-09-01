@@ -10,9 +10,23 @@ process.env.VITE_PUBLIC = process.env.VITE_DEV_SERVER_URL
 let win: BrowserWindow | null = null
 
 function createWindow() {
+  const { screen } = require('electron')
+  const primaryDisplay = screen.getPrimaryDisplay()
+  const { width } = primaryDisplay.workAreaSize
+
+  const windowWidth = 400
+  const windowHeight = 400
+
   win = new BrowserWindow({
-    width: 800,
-    height: 600,
+    width: windowWidth,
+    height: windowHeight,
+    x: Math.floor(width / 2 - windowWidth / 2),
+    y: 0,
+    frame: false,
+    transparent: true,
+    alwaysOnTop: true,
+    resizable: false,
+    skipTaskbar: true,
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
     },
