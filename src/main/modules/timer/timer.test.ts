@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { startTimer, stopTimer, setupTimer } from './index'
+import { describe, it, vi, beforeEach, afterEach } from 'vitest'
+import { startTimer, stopTimer } from './index'
 
 vi.mock('electron', () => ({
   ipcMain: { handle: vi.fn() },

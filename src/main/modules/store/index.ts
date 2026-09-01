@@ -1,7 +1,7 @@
 import { app, ipcMain } from 'electron'
 import { join } from 'path'
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'fs'
-import { StoreData, Task } from '../../../shared/types'
+import type { StoreData, Task } from '../../../shared/types'
 
 const STORE_PATH = join(app.getPath('userData'), 'store.json')
 

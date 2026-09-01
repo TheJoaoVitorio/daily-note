@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain } from 'electron'
+import { app, BrowserWindow } from 'electron'
 import { join } from 'path'
 
 process.env.DIST_ELECTRON = join(__dirname, '../')
@@ -32,10 +32,11 @@ function createWindow() {
     },
   })
 
-  if (process.env.VITE_DEV_SERVER_URL) {
-    win.loadURL(process.env.VITE_DEV_SERVER_URL)
+  const devUrl = process.env.VITE_DEV_SERVER_URL
+  if (devUrl) {
+    win.loadURL(devUrl)
   } else {
-    win.loadFile(join(process.env.DIST, 'src/renderer/index.html'))
+    win.loadFile(join(process.env.DIST || '', 'src/renderer/index.html'))
   }
 }
 
