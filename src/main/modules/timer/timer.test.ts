@@ -1,6 +1,10 @@
 import { describe, it, vi, beforeEach, afterEach } from 'vitest'
 import { startTimer, stopTimer } from './index'
 
+vi.mock('../store', () => ({
+  completeTask: vi.fn()
+}))
+
 vi.mock('electron', () => ({
   ipcMain: { handle: vi.fn() },
   BrowserWindow: {
@@ -24,7 +28,7 @@ describe('Timer Module', () => {
   })
 
   it('starts and stops correctly', () => {
-    startTimer(1) // 1 minute = 60 seconds
+    startTimer('test-task', 1) // 1 minute = 60 seconds
     
     // Advance 1 second
     vi.advanceTimersByTime(1000)
