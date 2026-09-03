@@ -4,7 +4,7 @@ import { join } from 'path'
 let tray: Tray | null = null
 
 export function setupTray() {
-  const iconPath = join(process.env.VITE_PUBLIC || join(import.meta.dirname, '../../public'), 'favicon.svg')
+  const iconPath = join(process.env.VITE_PUBLIC || join(__dirname, '../../public'), 'favicon.svg')
   const icon = nativeImage.createFromPath(iconPath)
   
   tray = new Tray(icon)

@@ -9,7 +9,7 @@ var __require = /* #__PURE__ */ (() => createRequire(import.meta.url))();
 //#region src/main/modules/tray/index.ts
 var tray = null;
 function setupTray() {
-	const iconPath = join(process.env.VITE_PUBLIC || join(import.meta.dirname, "../../public"), "favicon.svg");
+	const iconPath = join(process.env.VITE_PUBLIC || join(__dirname, "../../public"), "favicon.svg");
 	const icon = nativeImage.createFromPath(iconPath);
 	tray = new Tray(icon);
 	const contextMenu = Menu.buildFromTemplate([
@@ -205,7 +205,7 @@ function cleanupShortcuts() {
 }
 //#endregion
 //#region src/main/index.ts
-process.env.DIST_ELECTRON = join(import.meta.dirname, "../");
+process.env.DIST_ELECTRON = join(__dirname, "../");
 process.env.DIST = join(process.env.DIST_ELECTRON, "../dist");
 process.env.VITE_PUBLIC = process.env.VITE_DEV_SERVER_URL ? join(process.env.DIST_ELECTRON, "../public") : process.env.DIST;
 var win = null;
@@ -223,7 +223,7 @@ function createWindow() {
 		alwaysOnTop: true,
 		resizable: false,
 		skipTaskbar: true,
-		webPreferences: { preload: join(import.meta.dirname, "../preload/index.cjs") }
+		webPreferences: { preload: join(__dirname, "../preload/index.cjs") }
 	});
 	const devUrl = process.env.VITE_DEV_SERVER_URL;
 	if (devUrl) win.loadURL(`${devUrl}src/renderer/index.html`);
