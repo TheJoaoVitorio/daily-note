@@ -16,7 +16,7 @@ export function setupShortcuts() {
         stopTimer()
         isRunning = false
       } else {
-        startTimer(25) // Default 25 min
+        startTimer("", 25) // Default 25 min, no specific task
         isRunning = true
       }
     })

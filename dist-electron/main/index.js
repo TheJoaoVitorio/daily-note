@@ -159,6 +159,19 @@ function toggleTask(id) {
 		completed: updatedRow.completed === 1
 	};
 }
+function completeTask(id) {
+	const taskRow = db.prepare("SELECT * FROM tasks WHERE id = ?").get(id);
+	if (!taskRow || taskRow.completed === 1) return null;
+	db.prepare("UPDATE tasks SET completed = 1, completedAt = ? WHERE id = ?").run(Date.now(), id);
+	db.prepare(`
+    INSERT INTO activity (date, completedCount) VALUES (?, 1)
+    ON CONFLICT(date) DO UPDATE SET completedCount = completedCount + 1
+  `).run(taskRow.date);
+	return {
+		...db.prepare("SELECT * FROM tasks WHERE id = ?").get(id),
+		completed: true
+	};
+}
 function deleteTask(id) {
 	const taskRow = db.prepare("SELECT * FROM tasks WHERE id = ?").get(id);
 	if (!taskRow) return false;
@@ -170,24 +183,36 @@ function deleteTask(id) {
 //#region src/main/modules/timer/index.ts
 var interval = null;
 var timeRemaining = 0;
+var totalTime = 0;
 var isRunning$1 = false;
+var currentTaskId = null;
 function setupTimer() {
-	electron.ipcMain.handle("timer:start", (_, minutes) => startTimer(minutes));
+	electron.ipcMain.handle("timer:start", (_, taskId, minutes) => startTimer(taskId, minutes));
 	electron.ipcMain.handle("timer:stop", () => stopTimer());
 	electron.ipcMain.handle("timer:status", () => ({
 		isRunning: isRunning$1,
-		timeRemaining
+		timeRemaining,
+		totalTime,
+		taskId: currentTaskId
 	}));
 }
-function startTimer(minutes) {
+function startTimer(taskId, minutes) {
 	if (isRunning$1) return;
+	currentTaskId = taskId;
 	timeRemaining = minutes * 60;
+	totalTime = minutes * 60;
 	isRunning$1 = true;
 	interval = setInterval(() => {
 		if (timeRemaining > 0) {
 			timeRemaining -= 1;
 			broadcastTick();
 		} else {
+			if (currentTaskId) {
+				completeTask(currentTaskId);
+				electron.BrowserWindow.getAllWindows().forEach((win) => {
+					win.webContents.send("timer:finished", currentTaskId);
+				});
+			}
 			stopTimer();
 			showNotification("Focus Session Complete!", "Great job staying focused.");
 		}
@@ -198,13 +223,17 @@ function stopTimer() {
 	interval = null;
 	isRunning$1 = false;
 	timeRemaining = 0;
+	totalTime = 0;
+	currentTaskId = null;
 	broadcastTick();
 }
 function broadcastTick() {
 	electron.BrowserWindow.getAllWindows().forEach((win) => {
 		win.webContents.send("timer:tick", {
 			isRunning: isRunning$1,
-			timeRemaining
+			timeRemaining,
+			totalTime,
+			taskId: currentTaskId
 		});
 	});
 }
@@ -224,7 +253,7 @@ function setupShortcuts() {
 				stopTimer();
 				isRunning = false;
 			} else {
-				startTimer(25);
+				startTimer("", 25);
 				isRunning = true;
 			}
 		});

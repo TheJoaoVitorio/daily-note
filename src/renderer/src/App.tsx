@@ -52,6 +52,8 @@ function App() {
 
   const [currentMonth, setCurrentMonth] = useState(new Date())
 
+  const [totalTime, setTotalTime] = useState(0)
+
   const loadData = (date: string) => {
     if (window.electron) {
       window.electron.ipcRenderer.invoke('store:getData', date).then((data: StoreData) => {
@@ -67,12 +69,17 @@ function App() {
 
   useEffect(() => {
     if (window.electron) {
-      window.electron.ipcRenderer.on('timer:tick', (data: { isRunning: boolean, timeRemaining: number }) => {
+      window.electron.ipcRenderer.on('timer:tick', (data: { isRunning: boolean, timeRemaining: number, totalTime: number, taskId: string | null }) => {
         setIsRunning(data.isRunning)
         setTimeRemaining(data.timeRemaining)
+        setTotalTime(data.totalTime)
+        if (data.isRunning && data.taskId) setActiveTaskId(data.taskId)
+      })
+      window.electron.ipcRenderer.on('timer:finished', () => {
+        loadData(selectedDate)
       })
     }
-  }, [])
+  }, [selectedDate])
 
   const formatTime = (seconds: number) => {
     const m = Math.floor(seconds / 60).toString().padStart(2, '0')
@@ -82,7 +89,7 @@ function App() {
 
   const handleStartTimer = (taskId: string, minutes: number) => {
     setActiveTaskId(taskId)
-    if (window.electron) window.electron.ipcRenderer.invoke('timer:start', minutes)
+    if (window.electron) window.electron.ipcRenderer.invoke('timer:start', taskId, minutes)
   }
 
   const handleStopTimer = () => {
@@ -210,12 +217,20 @@ function App() {
       </div>
 
       <div 
-        className={`bg-[#050505] backdrop-blur-3xl rounded-[32px] shadow-2xl transition-all duration-500 ease-[cubic-bezier(0.23,1,0.32,1)] overflow-hidden flex flex-col mt-2 border ${
-          isRunning && viewState === 'collapsed' ? 'border-blue-500 shadow-blue-900/20' : 'border-white/10'
-        } ${containerClass}`}
+        className={`bg-[#050505] backdrop-blur-3xl rounded-[32px] shadow-2xl transition-all duration-500 ease-[cubic-bezier(0.23,1,0.32,1)] overflow-hidden flex flex-col mt-2 border border-white/10 ${
+          isRunning && viewState === 'collapsed' ? 'shadow-blue-900/20' : ''
+        } ${containerClass} relative`}
         onMouseEnter={() => { if (viewState === 'collapsed') setViewState('hovered') }}
         onMouseLeave={() => { if (viewState === 'hovered') setViewState('collapsed') }}
       >
+        {/* PROGRESS BAR */}
+        {isRunning && totalTime > 0 && viewState === 'collapsed' && (
+          <div 
+            className="absolute bottom-0 left-0 h-1 bg-blue-500 transition-all duration-1000 ease-linear"
+            style={{ width: `${(1 - timeRemaining / totalTime) * 100}%` }}
+          />
+        )}
+
         {/* COLLAPSED STATE (PILL) */}
         {viewState === 'collapsed' && (
           <div className="flex items-center justify-between px-4 h-full">

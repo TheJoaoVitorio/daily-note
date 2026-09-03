@@ -147,6 +147,24 @@ export function toggleTask(id: string): Task | null {
   }
 }
 
+export function completeTask(id: string): Task | null {
+  const taskRow = db.prepare('SELECT * FROM tasks WHERE id = ?').get(id) as any
+  if (!taskRow || taskRow.completed === 1) return null // Already completed
+
+  db.prepare('UPDATE tasks SET completed = 1, completedAt = ? WHERE id = ?').run(Date.now(), id)
+
+  db.prepare(`
+    INSERT INTO activity (date, completedCount) VALUES (?, 1)
+    ON CONFLICT(date) DO UPDATE SET completedCount = completedCount + 1
+  `).run(taskRow.date)
+
+  const updatedRow = db.prepare('SELECT * FROM tasks WHERE id = ?').get(id) as any
+  return {
+    ...updatedRow,
+    completed: true
+  }
+}
+
 export function deleteTask(id: string) {
   const taskRow = db.prepare('SELECT * FROM tasks WHERE id = ?').get(id) as any
   if (!taskRow) return false
