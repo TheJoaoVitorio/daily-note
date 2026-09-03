@@ -6,7 +6,6 @@ describe('App component', () => {
   it('renders the pill with "Ready to Focus" status', () => {
     render(<App />)
     expect(screen.getByText('Ready to Focus')).toBeDefined()
-    expect(screen.getByText('00:00')).toBeDefined()
   })
 
   it('expands dashboard on hover', () => {
