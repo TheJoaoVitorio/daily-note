@@ -223,7 +223,7 @@ function createWindow() {
 		alwaysOnTop: true,
 		resizable: false,
 		skipTaskbar: true,
-		webPreferences: { preload: join(import.meta.dirname, "../preload/index.js") }
+		webPreferences: { preload: join(import.meta.dirname, "../preload/index.cjs") }
 	});
 	const devUrl = process.env.VITE_DEV_SERVER_URL;
 	if (devUrl) win.loadURL(`${devUrl}src/renderer/index.html`);

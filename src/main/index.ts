@@ -28,7 +28,7 @@ function createWindow() {
     resizable: false,
     skipTaskbar: true,
     webPreferences: {
-      preload: join(import.meta.dirname, '../preload/index.js'),
+      preload: join(import.meta.dirname, '../preload/index.cjs'),
     },
   })
 

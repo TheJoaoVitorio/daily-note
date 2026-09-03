@@ -29,6 +29,10 @@ export default defineConfig({
             outDir: 'dist-electron/preload',
             rollupOptions: {
               external: ['electron', 'better-sqlite3'],
+              output: {
+                format: 'cjs',
+                entryFileNames: '[name].cjs'
+              }
             },
           },
         },
