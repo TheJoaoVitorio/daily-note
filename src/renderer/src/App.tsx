@@ -241,7 +241,7 @@ function App() {
               </span>
             </div>
             {isRunning && (
-              <div className="text-sm font-mono font-bold text-white">
+              <div className="text-sm font-bold text-white tracking-widest">
                 {formatTime(timeRemaining)}
               </div>
             )}
