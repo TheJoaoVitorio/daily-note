@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import type { Task, StoreData, ActivityDay } from '../../shared/types'
-import { Play, Square, Calendar as CalendarIcon, Clock, Trash2, Maximize2, X, ChevronLeft, ChevronRight, CheckCircle2, Circle } from 'lucide-react'
+import { Play, Square, Calendar as CalendarIcon, Clock, Trash2, Maximize2, X, ChevronLeft, ChevronRight, CheckCircle2, Circle, Edit2, ListTodo } from 'lucide-react'
 
 const formatDate = (date: Date) => date.toISOString().split('T')[0]
 
@@ -56,7 +56,7 @@ function App() {
       window.electron.ipcRenderer.invoke('store:getData', date).then((data: StoreData) => {
         setTasks(data.tasks)
         setActivity(data.activity)
-      })
+      }).catch(err => console.error("Error loading data:", err))
     }
   }
 
@@ -101,6 +101,9 @@ function App() {
         setNewTaskTitle('')
         setNewTaskSubtext('')
         setIsAddingTask(false)
+      }).catch(err => {
+        console.error("Failed to add task:", err)
+        alert("Failed to add task: " + err.message)
       })
     }
   }
@@ -132,7 +135,6 @@ function App() {
     const daysInMonth = new Date(year, month + 1, 0).getDate()
     
     const days = []
-    // 0 = Sunday in JS getDay, screenshot shows Monday start, we'll adapt slightly or keep standard
     for (let i = 0; i < firstDay; i++) days.push(null)
     for (let i = 1; i <= daysInMonth; i++) days.push(new Date(year, month, i))
 
@@ -142,7 +144,7 @@ function App() {
       <div className="flex flex-col h-full bg-[#0a0a0a] rounded-2xl p-4">
         <div className="flex justify-between items-center mb-6 px-2">
           <button onClick={() => setCurrentMonth(new Date(year, month - 1, 1))} className="p-1.5 bg-[#1a1a1a] hover:bg-white/10 rounded-full text-white/70"><ChevronLeft size={14} /></button>
-          <span className="font-semibold text-sm">{monthName}</span>
+          <span className="font-semibold text-sm text-white">{monthName}</span>
           <button onClick={() => setCurrentMonth(new Date(year, month + 1, 1))} className="p-1.5 bg-[#1a1a1a] hover:bg-white/10 rounded-full text-white/70"><ChevronRight size={14} /></button>
         </div>
         <div className="grid grid-cols-7 gap-y-4 gap-x-2 text-center text-[10px] uppercase tracking-wider mb-2 text-white/40 font-medium">
@@ -169,7 +171,7 @@ function App() {
         </div>
         
         <div className="mt-auto">
-          <button onClick={() => setSelectedDate(formatDate(new Date()))} className="w-full py-2 bg-[#1a1a1a] hover:bg-[#222] rounded-xl text-xs font-medium transition-colors">
+          <button onClick={() => setSelectedDate(formatDate(new Date()))} className="w-full py-2 bg-[#1a1a1a] hover:bg-[#222] rounded-xl text-xs font-medium text-white transition-colors">
             Today
           </button>
         </div>
@@ -184,7 +186,7 @@ function App() {
   if (viewState === 'expanded') containerClass = "w-[760px] h-[520px]"
 
   return (
-    <div className="w-full h-full flex justify-center pt-2 select-none relative group">
+    <div className="w-full h-full flex justify-center pt-2 select-none relative group text-white">
       {/* Drag handle */}
       <div 
         className="absolute top-0 w-32 h-2 cursor-grab opacity-0 group-hover:opacity-100 flex justify-center items-center z-50"
@@ -222,8 +224,9 @@ function App() {
           <div className="flex-1 flex p-5 gap-6 animate-in fade-in duration-300">
             {/* Left: To Do */}
             <div className="flex-1 flex flex-col min-w-0 bg-[#0f0f0f] rounded-2xl p-4 border border-white/5 relative">
-              <div className="flex justify-between items-center mb-4">
+              <div className="flex justify-between items-center mb-4 text-white">
                 <div className="flex items-center gap-2">
+                  <ListTodo size={16} className="text-white/70" />
                   <span className="font-semibold text-sm">To do</span>
                 </div>
                 <button onClick={() => setViewState('expanded')} className="text-white/40 hover:text-white transition-colors">
@@ -251,7 +254,7 @@ function App() {
                   </div>
                 ))}
               </div>
-              <button onClick={() => setViewState('expanded')} className="mt-3 text-xs text-white/40 hover:text-white/70 text-left transition-colors">
+              <button onClick={() => { setViewState('expanded'); setIsAddingTask(true) }} className="mt-3 text-xs text-white/40 hover:text-white/70 text-left transition-colors">
                 Add a task
               </button>
             </div>
@@ -266,9 +269,9 @@ function App() {
         {/* EXPANDED STATE (FULL DASHBOARD) */}
         {viewState === 'expanded' && (
           <div className="flex-1 flex flex-col p-4 animate-in fade-in duration-300">
-            <div className="flex justify-between items-center mb-4 px-2">
+            <div className="flex justify-between items-center mb-4 px-2 text-white">
               <span className="font-semibold text-sm flex items-center gap-2">
-                Tasks
+                <ListTodo size={16} className="text-white/70" /> Tasks
               </span>
               <div className="flex items-center gap-3">
                 <span className="text-xs text-white/40">{tasks.filter(t => !t.completed).length} open</span>
@@ -282,10 +285,10 @@ function App() {
               {renderCalendar()}
 
               <div className="flex flex-col min-h-0 bg-[#0a0a0a] rounded-2xl">
-                <div className="flex justify-between items-center mb-4">
+                <div className="flex justify-between items-center mb-4 text-white">
                   <span className="font-semibold">Today</span>
                   <div className="flex bg-[#1a1a1a] rounded-full p-0.5">
-                    <button className="px-3 py-1 text-xs font-medium bg-blue-600 rounded-full">Day</button>
+                    <button className="px-3 py-1 text-xs font-medium bg-blue-600 text-white rounded-full">Day</button>
                     <button className="px-3 py-1 text-xs font-medium text-white/50 hover:text-white">Unscheduled 0</button>
                   </div>
                 </div>
