@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import type { Task, StoreData, ActivityDay } from '../../shared/types'
-import { Play, Square, Calendar as CalendarIcon, Clock, Trash2, Maximize2, X, ChevronLeft, ChevronRight, CheckCircle2, Circle, ChevronUp, ChevronDown, ListTodo } from 'lucide-react'
+import { Play, Square, Calendar as CalendarIcon, Clock, Trash2, Maximize2, X, ChevronLeft, ChevronRight, CheckCircle2, Circle, ChevronUp, ChevronDown, ListTodo, Flame } from 'lucide-react'
 
 const formatDate = (date: Date) => date.toISOString().split('T')[0]
 
@@ -23,7 +23,7 @@ const Heatmap = ({ activity }: { activity: ActivityDay[] }) => {
   return (
     <div className="flex flex-col items-start w-full">
       <div className="text-xs font-semibold text-white mb-2 flex items-center gap-1">
-        🔥 Journey Streak <span className="text-white/40 font-normal ml-1">5d</span>
+        <Flame size={14} className="text-orange-500 mr-0.5" /> Journey Streak <span className="text-white/40 font-normal ml-1">5d</span>
       </div>
       <div className="grid grid-cols-12 gap-1.5 w-full" style={{ direction: 'ltr' }}>
         {days.map(d => {
