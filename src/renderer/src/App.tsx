@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import type { Task, StoreData, ActivityDay } from '../../shared/types'
-import { Play, Square, Calendar as CalendarIcon, Clock, Trash2, Maximize2, X, ChevronLeft, ChevronRight, CheckCircle2, Circle, Edit2, ListTodo } from 'lucide-react'
+import { Play, Square, Calendar as CalendarIcon, Clock, Trash2, Maximize2, X, ChevronLeft, ChevronRight, CheckCircle2, Circle, ChevronUp, ChevronDown, ListTodo } from 'lucide-react'
 
 const formatDate = (date: Date) => date.toISOString().split('T')[0]
 
@@ -48,6 +48,7 @@ function App() {
   const [newTaskTitle, setNewTaskTitle] = useState('')
   const [newTaskSubtext, setNewTaskSubtext] = useState('')
   const [activeTaskId, setActiveTaskId] = useState<string | null>(null)
+  const [activeDurationPopover, setActiveDurationPopover] = useState<string | null>(null)
 
   const [currentMonth, setCurrentMonth] = useState(new Date())
 
@@ -104,6 +105,19 @@ function App() {
       }).catch(err => {
         console.error("Failed to add task:", err)
         alert("Failed to add task: " + err.message)
+      })
+    }
+  }
+
+  const handleUpdateTaskDuration = (id: string, delta: number) => {
+    const task = tasks.find(t => t.id === id)
+    if (!task) return
+    const newMinutes = Math.max(1, task.estimatedMinutes + delta)
+    if (window.electron) {
+      window.electron.ipcRenderer.invoke('store:updateTask', id, { estimatedMinutes: newMinutes }).then((updatedTask) => {
+        if (updatedTask) {
+          setTasks(tasks.map(t => t.id === id ? updatedTask : t))
+        }
       })
     }
   }
@@ -246,10 +260,12 @@ function App() {
                       </div>
                     </div>
                     <button 
-                      onClick={() => handleStartTimer(t.id, t.estimatedMinutes)}
-                      className="w-7 h-7 shrink-0 flex items-center justify-center rounded-full bg-blue-600 text-white hover:bg-blue-500 transition-colors"
+                      onClick={() => isRunning && activeTaskId === t.id ? handleStopTimer() : handleStartTimer(t.id, t.estimatedMinutes)}
+                      className={`w-7 h-7 shrink-0 flex items-center justify-center rounded-full transition-colors ${
+                        isRunning && activeTaskId === t.id ? 'bg-red-500 text-white hover:bg-red-600' : 'bg-blue-600 text-white hover:bg-blue-500'
+                      }`}
                     >
-                      <Play size={12} fill="currentColor" className="ml-0.5" />
+                      {isRunning && activeTaskId === t.id ? <Square size={10} fill="currentColor" /> : <Play size={10} fill="currentColor" className="ml-0.5" />}
                     </button>
                   </div>
                 ))}
@@ -284,7 +300,7 @@ function App() {
             <div className="flex-1 grid grid-cols-[260px_1fr] gap-4 min-h-0">
               {renderCalendar()}
 
-              <div className="flex flex-col min-h-0 bg-[#0a0a0a] rounded-2xl">
+              <div className="flex flex-col min-h-0 bg-[#0a0a0a] rounded-2xl relative">
                 <div className="flex justify-between items-center mb-4 text-white">
                   <span className="font-semibold">Today</span>
                   <div className="flex bg-[#1a1a1a] rounded-full p-0.5">
@@ -293,39 +309,71 @@ function App() {
                   </div>
                 </div>
 
-                <div className="flex-1 overflow-y-auto space-y-2 custom-scrollbar pr-2 pb-4">
+                <div className="flex-1 overflow-y-auto space-y-2 custom-scrollbar pr-2 pb-32">
                   {tasks.map(t => (
-                    <div key={t.id} className="bg-[#111111] border border-white/5 hover:border-white/10 p-3 rounded-2xl flex items-center justify-between group transition-colors">
-                      <div className="flex items-center gap-3 overflow-hidden">
-                        <button onClick={() => handleToggleTask(t.id)} className="text-white/30 hover:text-white shrink-0">
-                          {t.completed ? <CheckCircle2 size={18} className="text-blue-500" /> : <Circle size={18} />}
-                        </button>
-                        <span className={`text-sm font-medium truncate ${t.completed ? 'line-through text-white/40' : 'text-white/90'}`}>{t.title}</span>
-                      </div>
-                      <div className="flex items-center gap-3 shrink-0">
-                        <div className="flex items-center gap-2 text-xs text-white/40 bg-[#1a1a1a] px-2 py-1 rounded-lg">
-                          <CalendarIcon size={12} /> Today
+                    <div key={t.id} className="relative">
+                      <div className="bg-[#111111] border border-white/5 hover:border-white/10 p-3 rounded-2xl flex items-center justify-between group transition-colors">
+                        <div className="flex items-center gap-3 overflow-hidden">
+                          <button onClick={() => handleToggleTask(t.id)} className="text-white/30 hover:text-white shrink-0">
+                            {t.completed ? <CheckCircle2 size={18} className="text-blue-500" /> : <Circle size={18} />}
+                          </button>
+                          <span className={`text-sm font-medium truncate ${t.completed ? 'line-through text-white/40' : 'text-white/90'}`}>{t.title}</span>
                         </div>
-                        <div className="flex items-center gap-2 text-xs text-white/40 bg-[#1a1a1a] px-2 py-1 rounded-lg">
-                          <Clock size={12} /> {t.estimatedMinutes}m
+                        <div className="flex items-center gap-3 shrink-0">
+                          <div className="flex items-center gap-2 text-xs text-white/40 bg-[#1a1a1a] px-2 py-1 rounded-lg">
+                            <CalendarIcon size={12} /> Today
+                          </div>
+                          <button 
+                            onClick={() => setActiveDurationPopover(activeDurationPopover === t.id ? null : t.id)}
+                            className="flex items-center gap-2 text-xs text-white/40 bg-[#1a1a1a] hover:bg-[#222] transition-colors px-2 py-1 rounded-lg"
+                          >
+                            <Clock size={12} /> {t.estimatedMinutes}m
+                          </button>
+                          <button 
+                            onClick={() => isRunning && activeTaskId === t.id ? handleStopTimer() : handleStartTimer(t.id, t.estimatedMinutes)}
+                            className={`w-7 h-7 flex items-center justify-center rounded-full transition-colors ${
+                              isRunning && activeTaskId === t.id ? 'bg-red-500 text-white hover:bg-red-600' : 'bg-blue-600 text-white hover:bg-blue-500'
+                            }`}
+                          >
+                            {isRunning && activeTaskId === t.id ? <Square size={12} fill="currentColor" /> : <Play size={12} fill="currentColor" className="ml-0.5" />}
+                          </button>
+                          <button onClick={() => handleDeleteTask(t.id)} className="text-white/20 hover:text-red-400 transition-colors"><Trash2 size={14} /></button>
                         </div>
-                        <button 
-                          onClick={() => isRunning && activeTaskId === t.id ? handleStopTimer() : handleStartTimer(t.id, t.estimatedMinutes)}
-                          className={`w-7 h-7 flex items-center justify-center rounded-full transition-colors ${
-                            isRunning && activeTaskId === t.id ? 'bg-red-500 text-white hover:bg-red-600' : 'bg-blue-600 text-white hover:bg-blue-500'
-                          }`}
-                        >
-                          {isRunning && activeTaskId === t.id ? <Square size={12} fill="currentColor" /> : <Play size={12} fill="currentColor" className="ml-0.5" />}
-                        </button>
-                        <button className="text-white/20 hover:text-white/80 transition-colors"><Edit2 size={14} /></button>
-                        <button onClick={() => handleDeleteTask(t.id)} className="text-white/20 hover:text-red-400 transition-colors"><Trash2 size={14} /></button>
                       </div>
+
+                      {/* Focus duration popover */}
+                      {activeDurationPopover === t.id && (
+                        <div className="absolute right-10 top-full mt-2 bg-[#111111] border border-white/10 rounded-3xl p-5 shadow-2xl z-50 flex flex-col items-center gap-4 animate-in fade-in zoom-in-95 duration-200">
+                          <div className="text-sm font-semibold text-white">Focus duration</div>
+                          <div className="flex items-center gap-4 text-white">
+                            {/* Minutes */}
+                            <div className="flex flex-col items-center gap-2">
+                              <span className="text-[10px] font-medium text-white/40 tracking-widest uppercase">Min</span>
+                              <button onClick={() => handleUpdateTaskDuration(t.id, 5)} className="text-white/40 hover:text-white transition-colors p-1"><ChevronUp size={16} /></button>
+                              <div className="w-16 h-12 bg-[#1a1a1a] rounded-xl flex items-center justify-center text-xl font-medium">
+                                {t.estimatedMinutes.toString().padStart(2, '0')}
+                              </div>
+                              <button onClick={() => handleUpdateTaskDuration(t.id, -5)} className="text-white/40 hover:text-white transition-colors p-1"><ChevronDown size={16} /></button>
+                            </div>
+                            <div className="text-xl font-bold text-white/30 mb-8">:</div>
+                            {/* Seconds (Visual only for now since estimation is in minutes) */}
+                            <div className="flex flex-col items-center gap-2">
+                              <span className="text-[10px] font-medium text-white/40 tracking-widest uppercase">Sec</span>
+                              <button className="text-white/40 hover:text-white transition-colors p-1"><ChevronUp size={16} /></button>
+                              <div className="w-16 h-12 bg-[#1a1a1a] rounded-xl flex items-center justify-center text-xl font-medium">
+                                00
+                              </div>
+                              <button className="text-white/40 hover:text-white transition-colors p-1"><ChevronDown size={16} /></button>
+                            </div>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
 
                 {isAddingTask ? (
-                  <div className="bg-[#111111] p-3 rounded-2xl border border-white/10 flex flex-col gap-3">
+                  <div className="bg-[#111111] p-3 rounded-2xl border border-white/10 flex flex-col gap-3 mt-auto shrink-0 relative z-10">
                     <div className="flex gap-2">
                       <input 
                         autoFocus
@@ -355,7 +403,7 @@ function App() {
                     </div>
                   </div>
                 ) : (
-                  <button onClick={() => setIsAddingTask(true)} className="w-full bg-[#111111] hover:bg-[#1a1a1a] border border-white/5 rounded-2xl p-4 text-left text-sm text-white/40 transition-colors">
+                  <button onClick={() => setIsAddingTask(true)} className="w-full bg-[#111111] hover:bg-[#1a1a1a] border border-white/5 rounded-2xl p-4 text-left text-sm text-white/40 transition-colors mt-auto shrink-0 relative z-10">
                     Add a task
                   </button>
                 )}

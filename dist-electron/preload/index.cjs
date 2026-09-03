@@ -1,11 +1,10 @@
-import { contextBridge, ipcRenderer } from "electron";
+let electron = require("electron");
 //#region src/preload/index.ts
-contextBridge.exposeInMainWorld("electron", { ipcRenderer: {
-	send: (channel, ...args) => ipcRenderer.send(channel, ...args),
-	invoke: (channel, ...args) => ipcRenderer.invoke(channel, ...args),
+electron.contextBridge.exposeInMainWorld("electron", { ipcRenderer: {
+	send: (channel, ...args) => electron.ipcRenderer.send(channel, ...args),
+	invoke: (channel, ...args) => electron.ipcRenderer.invoke(channel, ...args),
 	on: (channel, listener) => {
-		ipcRenderer.on(channel, (_event, ...args) => listener(...args));
+		electron.ipcRenderer.on(channel, (_event, ...args) => listener(...args));
 	}
 } });
 //#endregion
-export {};

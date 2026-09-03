@@ -50,6 +50,7 @@ export function setupStore() {
   // Set up IPC handlers
   ipcMain.handle('store:getData', (_, date: string) => readData(date))
   ipcMain.handle('store:addTask', (_, task: Omit<Task, 'id' | 'createdAt'>) => addTask(task))
+  ipcMain.handle('store:updateTask', (_, id: string, updates: Partial<Task>) => updateTask(id, updates))
   ipcMain.handle('store:toggleTask', (_, id: string) => toggleTask(id))
   ipcMain.handle('store:deleteTask', (_, id: string) => deleteTask(id))
 }
@@ -92,6 +93,25 @@ export function addTask(taskData: Omit<Task, 'id' | 'createdAt'>): Task {
   })
 
   return newTask
+}
+
+export function updateTask(id: string, updates: Partial<Task>): Task | null {
+  const taskRow = db.prepare('SELECT * FROM tasks WHERE id = ?').get(id) as any
+  if (!taskRow) return null
+
+  if (updates.estimatedMinutes !== undefined) {
+    db.prepare('UPDATE tasks SET estimatedMinutes = ? WHERE id = ?').run(updates.estimatedMinutes, id)
+  }
+  
+  if (updates.title !== undefined) {
+    db.prepare('UPDATE tasks SET title = ? WHERE id = ?').run(updates.title, id)
+  }
+
+  const updatedRow = db.prepare('SELECT * FROM tasks WHERE id = ?').get(id) as any
+  return {
+    ...updatedRow,
+    completed: updatedRow.completed === 1
+  }
 }
 
 export function toggleTask(id: string): Task | null {

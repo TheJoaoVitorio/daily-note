@@ -1,18 +1,37 @@
-import { createRequire } from "node:module";
-import { BrowserWindow, Menu, Notification, Tray, app, globalShortcut, ipcMain, nativeImage } from "electron";
-import { join } from "path";
-import { existsSync, mkdirSync } from "fs";
-import Database from "better-sqlite3";
 //#region \0rolldown/runtime.js
-var __require = /* #__PURE__ */ (() => createRequire(import.meta.url))();
+var __create = Object.create;
+var __defProp = Object.defineProperty;
+var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
+var __getOwnPropNames = Object.getOwnPropertyNames;
+var __getProtoOf = Object.getPrototypeOf;
+var __hasOwnProp = Object.prototype.hasOwnProperty;
+var __copyProps = (to, from, except, desc) => {
+	if (from && typeof from === "object" || typeof from === "function") for (var keys = __getOwnPropNames(from), i = 0, n = keys.length, key; i < n; i++) {
+		key = keys[i];
+		if (!__hasOwnProp.call(to, key) && key !== except) __defProp(to, key, {
+			get: ((k) => from[k]).bind(null, key),
+			enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable
+		});
+	}
+	return to;
+};
+var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__getProtoOf(mod)) : {}, __copyProps(isNodeMode || !mod || !mod.__esModule || !__hasOwnProp.call(mod, "default") ? __defProp(target, "default", {
+	value: mod,
+	enumerable: true
+}) : target, mod));
 //#endregion
+let electron = require("electron");
+let path = require("path");
+let fs = require("fs");
+let better_sqlite3 = require("better-sqlite3");
+better_sqlite3 = __toESM(better_sqlite3);
 //#region src/main/modules/tray/index.ts
 var tray = null;
 function setupTray() {
-	const iconPath = join(process.env.VITE_PUBLIC || join(__dirname, "../../public"), "favicon.svg");
-	const icon = nativeImage.createFromPath(iconPath);
-	tray = new Tray(icon);
-	const contextMenu = Menu.buildFromTemplate([
+	const iconPath = (0, path.join)(process.env.VITE_PUBLIC || (0, path.join)(__dirname, "../../public"), "favicon.svg");
+	const icon = electron.nativeImage.createFromPath(iconPath);
+	tray = new electron.Tray(icon);
+	const contextMenu = electron.Menu.buildFromTemplate([
 		{
 			label: "Daily Notch",
 			enabled: false
@@ -30,7 +49,7 @@ function setupTray() {
 		{
 			label: "Quit",
 			click: () => {
-				app.quit();
+				electron.app.quit();
 			}
 		}
 	]);
@@ -42,10 +61,10 @@ function setupTray() {
 //#region src/main/modules/store/index.ts
 var db;
 function setupStore() {
-	const userDataPath = app.getPath("userData");
-	if (!existsSync(userDataPath)) mkdirSync(userDataPath, { recursive: true });
-	const dbPath = app.isPackaged ? join(userDataPath, "daily-notch.sqlite") : join(process.cwd(), "daily-notch.sqlite");
-	db = new Database(dbPath);
+	const userDataPath = electron.app.getPath("userData");
+	if (!(0, fs.existsSync)(userDataPath)) (0, fs.mkdirSync)(userDataPath, { recursive: true });
+	const dbPath = electron.app.isPackaged ? (0, path.join)(userDataPath, "daily-notch.sqlite") : (0, path.join)(process.cwd(), "daily-notch.sqlite");
+	db = new better_sqlite3.default(dbPath);
 	db.exec(`
     CREATE TABLE IF NOT EXISTS tasks (
       id TEXT PRIMARY KEY,
@@ -69,10 +88,11 @@ function setupStore() {
 		db.prepare("INSERT INTO settings (key, value) VALUES ('streak', '0')").run();
 		db.prepare("INSERT INTO settings (key, value) VALUES ('focusMinutes', '25')").run();
 	}
-	ipcMain.handle("store:getData", (_, date) => readData(date));
-	ipcMain.handle("store:addTask", (_, task) => addTask(task));
-	ipcMain.handle("store:toggleTask", (_, id) => toggleTask(id));
-	ipcMain.handle("store:deleteTask", (_, id) => deleteTask(id));
+	electron.ipcMain.handle("store:getData", (_, date) => readData(date));
+	electron.ipcMain.handle("store:addTask", (_, task) => addTask(task));
+	electron.ipcMain.handle("store:updateTask", (_, id, updates) => updateTask(id, updates));
+	electron.ipcMain.handle("store:toggleTask", (_, id) => toggleTask(id));
+	electron.ipcMain.handle("store:deleteTask", (_, id) => deleteTask(id));
 }
 function readData(targetDate) {
 	if (!db) return {
@@ -110,6 +130,16 @@ function addTask(taskData) {
 	});
 	return newTask;
 }
+function updateTask(id, updates) {
+	if (!db.prepare("SELECT * FROM tasks WHERE id = ?").get(id)) return null;
+	if (updates.estimatedMinutes !== void 0) db.prepare("UPDATE tasks SET estimatedMinutes = ? WHERE id = ?").run(updates.estimatedMinutes, id);
+	if (updates.title !== void 0) db.prepare("UPDATE tasks SET title = ? WHERE id = ?").run(updates.title, id);
+	const updatedRow = db.prepare("SELECT * FROM tasks WHERE id = ?").get(id);
+	return {
+		...updatedRow,
+		completed: updatedRow.completed === 1
+	};
+}
 function toggleTask(id) {
 	const taskRow = db.prepare("SELECT * FROM tasks WHERE id = ?").get(id);
 	if (!taskRow) return null;
@@ -142,9 +172,9 @@ var interval = null;
 var timeRemaining = 0;
 var isRunning$1 = false;
 function setupTimer() {
-	ipcMain.handle("timer:start", (_, minutes) => startTimer(minutes));
-	ipcMain.handle("timer:stop", () => stopTimer());
-	ipcMain.handle("timer:status", () => ({
+	electron.ipcMain.handle("timer:start", (_, minutes) => startTimer(minutes));
+	electron.ipcMain.handle("timer:stop", () => stopTimer());
+	electron.ipcMain.handle("timer:status", () => ({
 		isRunning: isRunning$1,
 		timeRemaining
 	}));
@@ -171,7 +201,7 @@ function stopTimer() {
 	broadcastTick();
 }
 function broadcastTick() {
-	BrowserWindow.getAllWindows().forEach((win) => {
+	electron.BrowserWindow.getAllWindows().forEach((win) => {
 		win.webContents.send("timer:tick", {
 			isRunning: isRunning$1,
 			timeRemaining
@@ -179,7 +209,7 @@ function broadcastTick() {
 	});
 }
 function showNotification(title, body) {
-	if (Notification.isSupported()) new Notification({
+	if (electron.Notification.isSupported()) new electron.Notification({
 		title,
 		body
 	}).show();
@@ -188,8 +218,8 @@ function showNotification(title, body) {
 //#region src/main/modules/shortcuts/index.ts
 var isRunning = false;
 function setupShortcuts() {
-	app.whenReady().then(() => {
-		globalShortcut.register("CommandOrControl+Shift+Space", () => {
+	electron.app.whenReady().then(() => {
+		electron.globalShortcut.register("CommandOrControl+Shift+Space", () => {
 			if (isRunning) {
 				stopTimer();
 				isRunning = false;
@@ -201,19 +231,19 @@ function setupShortcuts() {
 	});
 }
 function cleanupShortcuts() {
-	globalShortcut.unregisterAll();
+	electron.globalShortcut.unregisterAll();
 }
 //#endregion
 //#region src/main/index.ts
-process.env.DIST_ELECTRON = join(__dirname, "../");
-process.env.DIST = join(process.env.DIST_ELECTRON, "../dist");
-process.env.VITE_PUBLIC = process.env.VITE_DEV_SERVER_URL ? join(process.env.DIST_ELECTRON, "../public") : process.env.DIST;
+process.env.DIST_ELECTRON = (0, path.join)(__dirname, "../");
+process.env.DIST = (0, path.join)(process.env.DIST_ELECTRON, "../dist");
+process.env.VITE_PUBLIC = process.env.VITE_DEV_SERVER_URL ? (0, path.join)(process.env.DIST_ELECTRON, "../public") : process.env.DIST;
 var win = null;
 function createWindow() {
-	const { screen } = __require("electron");
+	const { screen } = require("electron");
 	const { width } = screen.getPrimaryDisplay().workAreaSize;
 	const windowWidth = 800;
-	win = new BrowserWindow({
+	win = new electron.BrowserWindow({
 		width: windowWidth,
 		height: 600,
 		x: Math.floor(width / 2 - windowWidth / 2),
@@ -223,28 +253,27 @@ function createWindow() {
 		alwaysOnTop: true,
 		resizable: false,
 		skipTaskbar: true,
-		webPreferences: { preload: join(__dirname, "../preload/index.cjs") }
+		webPreferences: { preload: (0, path.join)(__dirname, "../preload/index.cjs") }
 	});
 	const devUrl = process.env.VITE_DEV_SERVER_URL;
 	if (devUrl) win.loadURL(`${devUrl}src/renderer/index.html`);
-	else win.loadFile(join(process.env.DIST || "", "src/renderer/index.html"));
+	else win.loadFile((0, path.join)(process.env.DIST || "", "src/renderer/index.html"));
 }
-app.whenReady().then(() => {
+electron.app.whenReady().then(() => {
 	setupStore();
 	setupTimer();
 	setupShortcuts();
 	createWindow();
 	setupTray();
 });
-app.on("window-all-closed", () => {
+electron.app.on("window-all-closed", () => {
 	cleanupShortcuts();
-	if (process.platform !== "darwin") app.quit();
+	if (process.platform !== "darwin") electron.app.quit();
 });
-app.on("will-quit", () => {
+electron.app.on("will-quit", () => {
 	cleanupShortcuts();
 });
-app.on("activate", () => {
-	if (BrowserWindow.getAllWindows().length === 0) createWindow();
+electron.app.on("activate", () => {
+	if (electron.BrowserWindow.getAllWindows().length === 0) createWindow();
 });
 //#endregion
-export {};
