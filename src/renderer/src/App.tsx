@@ -1,13 +1,10 @@
 import React, { useState, useEffect } from 'react'
 import type { Task, StoreData, ActivityDay } from '../../shared/types'
-import { Play, Square, Calendar as CalendarIcon, Clock, Trash2, Edit2, ChevronLeft, ChevronRight, CheckCircle2, Circle } from 'lucide-react'
+import { Play, Square, Calendar as CalendarIcon, Clock, Trash2, Maximize2, X, ChevronLeft, ChevronRight, CheckCircle2, Circle } from 'lucide-react'
 
-// Helper: YYYY-MM-DD
 const formatDate = (date: Date) => date.toISOString().split('T')[0]
 
-// Heatmap Component
 const Heatmap = ({ activity }: { activity: ActivityDay[] }) => {
-  // Generate last 60 days
   const days = []
   for (let i = 59; i >= 0; i--) {
     const d = new Date()
@@ -16,7 +13,7 @@ const Heatmap = ({ activity }: { activity: ActivityDay[] }) => {
   }
 
   const getIntensity = (count: number) => {
-    if (count === 0) return 'bg-white/10'
+    if (count === 0) return 'bg-[#1a1a1a]'
     if (count === 1) return 'bg-blue-900'
     if (count === 2) return 'bg-blue-700'
     if (count === 3) return 'bg-blue-500'
@@ -24,15 +21,15 @@ const Heatmap = ({ activity }: { activity: ActivityDay[] }) => {
   }
 
   return (
-    <div className="flex flex-col items-end">
+    <div className="flex flex-col items-start w-full">
       <div className="text-xs font-semibold text-white mb-2 flex items-center gap-1">
-        🔥 Journey Streak
+        🔥 Journey Streak <span className="text-white/40 font-normal ml-1">5d</span>
       </div>
-      <div className="grid grid-cols-12 gap-1" style={{ direction: 'ltr' }}>
+      <div className="grid grid-cols-12 gap-1.5 w-full" style={{ direction: 'ltr' }}>
         {days.map(d => {
           const act = activity.find(a => a.date === d)
           const count = act ? act.completedCount : 0
-          return <div key={d} className={`w-3 h-3 rounded-[3px] ${getIntensity(count)}`} title={`${d}: ${count} tasks`} />
+          return <div key={d} className={`w-full aspect-square rounded-[3px] ${getIntensity(count)}`} title={`${d}: ${count} tasks`} />
         })}
       </div>
     </div>
@@ -40,16 +37,16 @@ const Heatmap = ({ activity }: { activity: ActivityDay[] }) => {
 }
 
 function App() {
-  const [isHovered, setIsHovered] = useState(false)
+  const [viewState, setViewState] = useState<'collapsed' | 'hovered' | 'expanded'>('collapsed')
   const [tasks, setTasks] = useState<Task[]>([])
   const [activity, setActivity] = useState<ActivityDay[]>([])
-  const [streak, setStreak] = useState(0)
   const [timeRemaining, setTimeRemaining] = useState(0)
   const [isRunning, setIsRunning] = useState(false)
   
   const [selectedDate, setSelectedDate] = useState(formatDate(new Date()))
+  const [isAddingTask, setIsAddingTask] = useState(false)
   const [newTaskTitle, setNewTaskTitle] = useState('')
-  const [newTaskDuration, setNewTaskDuration] = useState('25')
+  const [newTaskSubtext, setNewTaskSubtext] = useState('')
   const [activeTaskId, setActiveTaskId] = useState<string | null>(null)
 
   const [currentMonth, setCurrentMonth] = useState(new Date())
@@ -59,7 +56,6 @@ function App() {
       window.electron.ipcRenderer.invoke('store:getData', date).then((data: StoreData) => {
         setTasks(data.tasks)
         setActivity(data.activity)
-        setStreak(data.streak)
       })
     }
   }
@@ -93,19 +89,19 @@ function App() {
     if (window.electron) window.electron.ipcRenderer.invoke('timer:stop')
   }
 
-  const handleAddTask = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter' && newTaskTitle.trim()) {
-      if (window.electron) {
-        window.electron.ipcRenderer.invoke('store:addTask', { 
-          title: newTaskTitle, 
-          completed: false,
-          estimatedMinutes: parseInt(newTaskDuration) || 25,
-          date: selectedDate
-        }).then((newTask) => {
-          setTasks([...tasks, newTask])
-          setNewTaskTitle('')
-        })
-      }
+  const handleAddTask = () => {
+    if (newTaskTitle.trim() && window.electron) {
+      window.electron.ipcRenderer.invoke('store:addTask', { 
+        title: newTaskTitle, 
+        completed: false,
+        estimatedMinutes: 25,
+        date: selectedDate
+      }).then((newTask) => {
+        setTasks([...tasks, newTask])
+        setNewTaskTitle('')
+        setNewTaskSubtext('')
+        setIsAddingTask(false)
+      })
     }
   }
 
@@ -114,7 +110,7 @@ function App() {
       window.electron.ipcRenderer.invoke('store:toggleTask', id).then((updatedTask) => {
         if (updatedTask) {
           setTasks(tasks.map(t => t.id === id ? updatedTask : t))
-          loadData(selectedDate) // refresh activity heatmap
+          loadData(selectedDate)
         }
       })
     }
@@ -136,35 +132,34 @@ function App() {
     const daysInMonth = new Date(year, month + 1, 0).getDate()
     
     const days = []
+    // 0 = Sunday in JS getDay, screenshot shows Monday start, we'll adapt slightly or keep standard
     for (let i = 0; i < firstDay; i++) days.push(null)
     for (let i = 1; i <= daysInMonth; i++) days.push(new Date(year, month, i))
 
     const monthName = currentMonth.toLocaleString('default', { month: 'long', year: 'numeric' })
 
     return (
-      <div className="flex flex-col h-full bg-[#111111] rounded-2xl p-4">
-        <div className="flex justify-between items-center mb-6">
-          <button onClick={() => setCurrentMonth(new Date(year, month - 1, 1))} className="p-1 hover:bg-white/10 rounded-full"><ChevronLeft size={16} /></button>
+      <div className="flex flex-col h-full bg-[#0a0a0a] rounded-2xl p-4">
+        <div className="flex justify-between items-center mb-6 px-2">
+          <button onClick={() => setCurrentMonth(new Date(year, month - 1, 1))} className="p-1.5 bg-[#1a1a1a] hover:bg-white/10 rounded-full text-white/70"><ChevronLeft size={14} /></button>
           <span className="font-semibold text-sm">{monthName}</span>
-          <button onClick={() => setCurrentMonth(new Date(year, month + 1, 1))} className="p-1 hover:bg-white/10 rounded-full"><ChevronRight size={16} /></button>
+          <button onClick={() => setCurrentMonth(new Date(year, month + 1, 1))} className="p-1.5 bg-[#1a1a1a] hover:bg-white/10 rounded-full text-white/70"><ChevronRight size={14} /></button>
         </div>
-        <div className="grid grid-cols-7 gap-y-4 gap-x-2 text-center text-xs mb-2 text-white/50">
+        <div className="grid grid-cols-7 gap-y-4 gap-x-2 text-center text-[10px] uppercase tracking-wider mb-2 text-white/40 font-medium">
           <div>S</div><div>M</div><div>T</div><div>W</div><div>T</div><div>F</div><div>S</div>
         </div>
-        <div className="grid grid-cols-7 gap-y-2 gap-x-2 text-center text-sm">
+        <div className="grid grid-cols-7 gap-y-2 gap-x-2 text-center text-sm font-medium">
           {days.map((d, i) => {
             if (!d) return <div key={i}></div>
             const dateStr = formatDate(d)
             const isSelected = dateStr === selectedDate
-            const isToday = dateStr === formatDate(new Date())
             
             return (
               <button 
                 key={i} 
                 onClick={() => setSelectedDate(dateStr)}
-                className={`w-8 h-8 rounded-full flex items-center justify-center transition-colors ${
-                  isSelected ? 'bg-blue-600 text-white' : 
-                  isToday ? 'bg-white/20 text-white' : 'hover:bg-white/10 text-white/80'
+                className={`w-8 h-8 rounded-full flex items-center justify-center transition-colors mx-auto ${
+                  isSelected ? 'bg-blue-600 text-white' : 'hover:bg-white/10 text-white/80'
                 }`}
               >
                 {d.getDate()}
@@ -172,136 +167,199 @@ function App() {
             )
           })}
         </div>
+        
+        <div className="mt-auto">
+          <button onClick={() => setSelectedDate(formatDate(new Date()))} className="w-full py-2 bg-[#1a1a1a] hover:bg-[#222] rounded-xl text-xs font-medium transition-colors">
+            Today
+          </button>
+        </div>
       </div>
     )
   }
 
   const activeTask = tasks.find(t => t.id === activeTaskId)
 
+  let containerClass = "w-64 h-12"
+  if (viewState === 'hovered') containerClass = "w-[540px] h-[260px]"
+  if (viewState === 'expanded') containerClass = "w-[760px] h-[520px]"
+
   return (
     <div className="w-full h-full flex justify-center pt-2 select-none relative group">
-      {/* Tiny invisible drag handle that appears on hover */}
+      {/* Drag handle */}
       <div 
-        className="absolute top-0 w-32 h-2 cursor-grab opacity-0 group-hover:opacity-100 flex justify-center items-center"
+        className="absolute top-0 w-32 h-2 cursor-grab opacity-0 group-hover:opacity-100 flex justify-center items-center z-50"
         style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}
       >
         <div className="w-12 h-1 bg-white/20 rounded-full mt-1"></div>
       </div>
 
       <div 
-        className={`bg-[#0a0a0a] backdrop-blur-3xl rounded-[32px] shadow-2xl transition-all duration-400 ease-[cubic-bezier(0.23,1,0.32,1)] overflow-hidden flex flex-col mt-2 border ${
-          isRunning ? 'border-blue-500/50 shadow-blue-900/20' : 'border-white/10'
-        } ${
-          isHovered ? 'w-[760px] h-[480px]' : 'w-[320px] h-12'
-        }`}
-        onMouseEnter={() => setIsHovered(true)}
-        onMouseLeave={() => setIsHovered(false)}
+        className={`bg-[#050505] backdrop-blur-3xl rounded-[32px] shadow-2xl transition-all duration-500 ease-[cubic-bezier(0.23,1,0.32,1)] overflow-hidden flex flex-col mt-2 border ${
+          isRunning && viewState === 'collapsed' ? 'border-blue-500 shadow-blue-900/20' : 'border-white/10'
+        } ${containerClass}`}
+        onMouseEnter={() => { if (viewState === 'collapsed') setViewState('hovered') }}
+        onMouseLeave={() => { if (viewState === 'hovered') setViewState('collapsed') }}
       >
-        {/* Collapsed Header */}
-        <div className="flex items-center justify-between px-4 h-12 shrink-0">
-          <div className="flex items-center space-x-3 text-white overflow-hidden">
-            <div className={`w-3 h-3 rounded-full shrink-0 ${isRunning ? 'bg-blue-500 animate-pulse' : 'bg-green-400'}`}></div>
-            <span className="text-sm font-medium truncate">
-              {isRunning && activeTask ? activeTask.title : 'Ready to Focus'}
-            </span>
-          </div>
-          <div className="flex items-center space-x-3 shrink-0">
+        {/* COLLAPSED STATE (PILL) */}
+        {viewState === 'collapsed' && (
+          <div className="flex items-center justify-between px-4 h-full">
+            <div className="flex items-center space-x-3 text-white overflow-hidden">
+              <div className={`w-2.5 h-2.5 rounded-full shrink-0 ${isRunning ? 'bg-blue-500' : 'bg-green-400'}`}></div>
+              <span className="text-sm font-medium truncate">
+                {isRunning && activeTask ? activeTask.title : 'Ready to Focus'}
+              </span>
+            </div>
             {isRunning && (
-               <button onClick={handleStopTimer} className="text-xs bg-red-500/20 hover:bg-red-500/40 text-red-400 px-2 py-1 rounded cursor-pointer transition-colors flex items-center gap-1">
-                 <Square size={12} fill="currentColor" /> Stop
-               </button>
+              <div className="text-sm font-mono font-bold text-white">
+                {formatTime(timeRemaining)}
+              </div>
             )}
-            <div className={`text-xs font-mono font-bold ${isRunning ? 'text-blue-400' : 'text-white/60'}`}>
-              {isRunning ? formatTime(timeRemaining) : '00:00'}
+          </div>
+        )}
+
+        {/* HOVERED STATE (MINI DASHBOARD) */}
+        {viewState === 'hovered' && (
+          <div className="flex-1 flex p-5 gap-6 animate-in fade-in duration-300">
+            {/* Left: To Do */}
+            <div className="flex-1 flex flex-col min-w-0 bg-[#0f0f0f] rounded-2xl p-4 border border-white/5 relative">
+              <div className="flex justify-between items-center mb-4">
+                <div className="flex items-center gap-2">
+                  <span className="font-semibold text-sm">To do</span>
+                </div>
+                <button onClick={() => setViewState('expanded')} className="text-white/40 hover:text-white transition-colors">
+                  <Maximize2 size={14} />
+                </button>
+              </div>
+              
+              <div className="flex-1 overflow-y-auto space-y-2 custom-scrollbar pr-1">
+                {tasks.slice(0, 3).map(t => (
+                  <div key={t.id} className="bg-[#1a1a1a] p-3 rounded-xl flex items-center justify-between group">
+                    <div className="flex items-center gap-3 overflow-hidden">
+                      <button onClick={() => handleToggleTask(t.id)} className="text-white/30 hover:text-white shrink-0">
+                        {t.completed ? <CheckCircle2 size={18} className="text-blue-500" /> : <Circle size={18} />}
+                      </button>
+                      <div className="flex flex-col truncate">
+                        <span className={`text-sm font-medium truncate ${t.completed ? 'line-through text-white/40' : 'text-white/90'}`}>{t.title}</span>
+                      </div>
+                    </div>
+                    <button 
+                      onClick={() => handleStartTimer(t.id, t.estimatedMinutes)}
+                      className="w-7 h-7 shrink-0 flex items-center justify-center rounded-full bg-blue-600 text-white hover:bg-blue-500 transition-colors"
+                    >
+                      <Play size={12} fill="currentColor" className="ml-0.5" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+              <button onClick={() => setViewState('expanded')} className="mt-3 text-xs text-white/40 hover:text-white/70 text-left transition-colors">
+                Add a task
+              </button>
+            </div>
+
+            {/* Right: Heatmap */}
+            <div className="w-[180px] shrink-0 pt-1">
+              <Heatmap activity={activity} />
             </div>
           </div>
-        </div>
+        )}
 
-        {/* Expanded UI */}
-        <div 
-          className={`flex-1 p-4 text-white transition-opacity duration-300 flex flex-col gap-4 ${
-            isHovered ? 'opacity-100' : 'opacity-0 pointer-events-none'
-          }`}
-        >
-          {/* Top Section: Heatmap */}
-          <div className="flex justify-end px-2">
-             <Heatmap activity={activity} />
-          </div>
-
-          {/* Main Grid: Calendar + Tasks */}
-          <div className="flex-1 grid grid-cols-[300px_1fr] gap-4 min-h-0">
-            {/* Calendar */}
-            {renderCalendar()}
-
-            {/* Tasks Panel */}
-            <div className="bg-[#111111] rounded-2xl p-4 flex flex-col min-h-0">
-              <div className="flex justify-between items-center mb-4">
-                <span className="font-semibold text-lg">
-                  {selectedDate === formatDate(new Date()) ? 'Today' : selectedDate}
-                </span>
-                <span className="bg-blue-600/20 text-blue-400 text-xs px-2 py-1 rounded-full font-medium">
-                  {tasks.filter(t => !t.completed).length} open
-                </span>
+        {/* EXPANDED STATE (FULL DASHBOARD) */}
+        {viewState === 'expanded' && (
+          <div className="flex-1 flex flex-col p-4 animate-in fade-in duration-300">
+            <div className="flex justify-between items-center mb-4 px-2">
+              <span className="font-semibold text-sm flex items-center gap-2">
+                Tasks
+              </span>
+              <div className="flex items-center gap-3">
+                <span className="text-xs text-white/40">{tasks.filter(t => !t.completed).length} open</span>
+                <button onClick={() => setViewState('hovered')} className="p-1 bg-[#1a1a1a] hover:bg-white/10 rounded-full text-white/70 transition-colors">
+                  <X size={14} />
+                </button>
               </div>
+            </div>
 
-              <div className="flex-1 overflow-y-auto space-y-2 pr-2 custom-scrollbar">
-                {tasks.length === 0 ? (
-                  <div className="text-sm text-white/30 italic mt-4 text-center">No tasks scheduled.</div>
-                ) : (
-                  tasks.map(t => (
-                    <div key={t.id} className="bg-white/5 hover:bg-white/10 p-3 rounded-xl flex items-center justify-between group transition-colors">
+            <div className="flex-1 grid grid-cols-[260px_1fr] gap-4 min-h-0">
+              {renderCalendar()}
+
+              <div className="flex flex-col min-h-0 bg-[#0a0a0a] rounded-2xl">
+                <div className="flex justify-between items-center mb-4">
+                  <span className="font-semibold">Today</span>
+                  <div className="flex bg-[#1a1a1a] rounded-full p-0.5">
+                    <button className="px-3 py-1 text-xs font-medium bg-blue-600 rounded-full">Day</button>
+                    <button className="px-3 py-1 text-xs font-medium text-white/50 hover:text-white">Unscheduled 0</button>
+                  </div>
+                </div>
+
+                <div className="flex-1 overflow-y-auto space-y-2 custom-scrollbar pr-2 pb-4">
+                  {tasks.map(t => (
+                    <div key={t.id} className="bg-[#111111] border border-white/5 hover:border-white/10 p-3 rounded-2xl flex items-center justify-between group transition-colors">
                       <div className="flex items-center gap-3 overflow-hidden">
-                        <button onClick={() => handleToggleTask(t.id)} className="text-white/40 hover:text-white transition-colors shrink-0">
-                          {t.completed ? <CheckCircle2 size={20} className="text-blue-500" /> : <Circle size={20} />}
+                        <button onClick={() => handleToggleTask(t.id)} className="text-white/30 hover:text-white shrink-0">
+                          {t.completed ? <CheckCircle2 size={18} className="text-blue-500" /> : <Circle size={18} />}
                         </button>
-                        <div className="flex flex-col overflow-hidden">
-                           <span className={`text-sm font-medium truncate ${t.completed ? 'line-through text-white/40' : 'text-white'}`}>{t.title}</span>
-                           <div className="flex items-center gap-3 text-[10px] text-white/40 mt-1">
-                              <span className="flex items-center gap-1"><CalendarIcon size={10} /> {t.date}</span>
-                              <span className="flex items-center gap-1"><Clock size={10} /> {t.estimatedMinutes}m</span>
-                           </div>
-                        </div>
+                        <span className={`text-sm font-medium truncate ${t.completed ? 'line-through text-white/40' : 'text-white/90'}`}>{t.title}</span>
                       </div>
-                      <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div className="flex items-center gap-3 shrink-0">
+                        <div className="flex items-center gap-2 text-xs text-white/40 bg-[#1a1a1a] px-2 py-1 rounded-lg">
+                          <CalendarIcon size={12} /> Today
+                        </div>
+                        <div className="flex items-center gap-2 text-xs text-white/40 bg-[#1a1a1a] px-2 py-1 rounded-lg">
+                          <Clock size={12} /> {t.estimatedMinutes}m
+                        </div>
                         <button 
                           onClick={() => isRunning && activeTaskId === t.id ? handleStopTimer() : handleStartTimer(t.id, t.estimatedMinutes)}
-                          className={`w-8 h-8 flex items-center justify-center rounded-full transition-colors ${
+                          className={`w-7 h-7 flex items-center justify-center rounded-full transition-colors ${
                             isRunning && activeTaskId === t.id ? 'bg-red-500 text-white hover:bg-red-600' : 'bg-blue-600 text-white hover:bg-blue-500'
                           }`}
                         >
-                          {isRunning && activeTaskId === t.id ? <Square size={14} fill="currentColor" /> : <Play size={14} fill="currentColor" className="ml-0.5" />}
+                          {isRunning && activeTaskId === t.id ? <Square size={12} fill="currentColor" /> : <Play size={12} fill="currentColor" className="ml-0.5" />}
                         </button>
-                        <button onClick={() => handleDeleteTask(t.id)} className="w-8 h-8 flex items-center justify-center rounded-full bg-white/5 hover:bg-red-500/20 hover:text-red-400 text-white/40 transition-colors">
-                           <Trash2 size={14} />
-                        </button>
+                        <button className="text-white/20 hover:text-white/80 transition-colors"><Edit2 size={14} /></button>
+                        <button onClick={() => handleDeleteTask(t.id)} className="text-white/20 hover:text-red-400 transition-colors"><Trash2 size={14} /></button>
                       </div>
                     </div>
-                  ))
-                )}
-              </div>
+                  ))}
+                </div>
 
-              <div className="mt-4 flex gap-2">
-                <input 
-                  type="text" 
-                  placeholder="Add a task..." 
-                  className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-sm text-white placeholder-white/30 outline-none focus:border-white/20 transition-colors"
-                  value={newTaskTitle}
-                  onChange={(e) => setNewTaskTitle(e.target.value)}
-                  onKeyDown={handleAddTask}
-                />
-                <input 
-                  type="number" 
-                  placeholder="Min" 
-                  title="Estimated Minutes"
-                  className="w-20 bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white placeholder-white/30 outline-none focus:border-white/20 transition-colors text-center"
-                  value={newTaskDuration}
-                  onChange={(e) => setNewTaskDuration(e.target.value)}
-                  onKeyDown={handleAddTask}
-                />
+                {isAddingTask ? (
+                  <div className="bg-[#111111] p-3 rounded-2xl border border-white/10 flex flex-col gap-3">
+                    <div className="flex gap-2">
+                      <input 
+                        autoFocus
+                        type="text" 
+                        placeholder="Task name" 
+                        className="flex-1 bg-transparent text-sm text-white placeholder-white/30 outline-none"
+                        value={newTaskTitle}
+                        onChange={(e) => setNewTaskTitle(e.target.value)}
+                        onKeyDown={(e) => e.key === 'Enter' && handleAddTask()}
+                      />
+                      <button onClick={handleAddTask} className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-1.5 rounded-xl text-xs font-medium transition-colors">
+                        Add
+                      </button>
+                    </div>
+                    <div className="flex gap-2">
+                      <input 
+                        type="text" 
+                        placeholder="Notes (optional)" 
+                        className="flex-1 bg-[#1a1a1a] rounded-lg px-3 py-1.5 text-xs text-white placeholder-white/30 outline-none"
+                        value={newTaskSubtext}
+                        onChange={(e) => setNewTaskSubtext(e.target.value)}
+                        onKeyDown={(e) => e.key === 'Enter' && handleAddTask()}
+                      />
+                      <button onClick={() => setIsAddingTask(false)} className="bg-[#1a1a1a] hover:bg-[#222] text-white/70 px-4 py-1.5 rounded-xl text-xs font-medium transition-colors">
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <button onClick={() => setIsAddingTask(true)} className="w-full bg-[#111111] hover:bg-[#1a1a1a] border border-white/5 rounded-2xl p-4 text-left text-sm text-white/40 transition-colors">
+                    Add a task
+                  </button>
+                )}
               </div>
             </div>
           </div>
-        </div>
+        )}
       </div>
     </div>
   )

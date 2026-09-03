@@ -11,19 +11,18 @@ describe('App component', () => {
 
   it('expands dashboard on hover', () => {
     render(<App />)
-    const pill = screen.getByText('Ready to Focus').parentElement?.parentElement?.parentElement
+    const pill = screen.getByText('Ready to Focus').closest('.group > div:nth-child(2)')
     expect(pill).toBeDefined()
     
-    // Check elements exist (they are initially hidden by opacity but in the DOM)
-    expect(screen.getByText(/Journey Streak/)).toBeDefined()
-    
-    // Trigger hover
     if (pill) {
       fireEvent.mouseEnter(pill)
-      expect(pill.className).toContain('w-[760px]') // Expanded width
+      expect(pill.className).toContain('w-[540px]') // Hovered width
+
+      // In hovered state, 'Journey Streak' should be visible
+      expect(screen.getByText(/Journey Streak/)).toBeDefined()
       
       fireEvent.mouseLeave(pill)
-      expect(pill.className).toContain('w-[320px]') // Collapsed width
+      expect(pill.className).toContain('w-64') // Collapsed width
     }
   })
 })
