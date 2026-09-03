@@ -12,7 +12,11 @@ export function setupStore() {
     mkdirSync(userDataPath, { recursive: true })
   }
 
-  const dbPath = join(userDataPath, 'daily-notch.sqlite')
+  // Create DB in project folder during dev, or AppData in production
+  const dbPath = app.isPackaged 
+    ? join(userDataPath, 'daily-notch.sqlite')
+    : join(process.cwd(), 'daily-notch.sqlite')
+    
   db = new Database(dbPath)
 
   // Init tables

@@ -44,7 +44,7 @@ var db;
 function setupStore() {
 	const userDataPath = app.getPath("userData");
 	if (!existsSync(userDataPath)) mkdirSync(userDataPath, { recursive: true });
-	const dbPath = join(userDataPath, "daily-notch.sqlite");
+	const dbPath = app.isPackaged ? join(userDataPath, "daily-notch.sqlite") : join(process.cwd(), "daily-notch.sqlite");
 	db = new Database(dbPath);
 	db.exec(`
     CREATE TABLE IF NOT EXISTS tasks (
