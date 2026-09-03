@@ -90,32 +90,22 @@ function App() {
   }
 
   const handleAddTask = () => {
-    alert("handleAddTask called! Title: " + newTaskTitle)
-    if (!newTaskTitle.trim()) {
-      alert("Title is empty!")
-      return
+    if (newTaskTitle.trim() && window.electron) {
+      window.electron.ipcRenderer.invoke('store:addTask', { 
+        title: newTaskTitle, 
+        completed: false,
+        estimatedMinutes: 25,
+        date: selectedDate
+      }).then((newTask) => {
+        setTasks([...tasks, newTask])
+        setNewTaskTitle('')
+        setNewTaskSubtext('')
+        setIsAddingTask(false)
+      }).catch(err => {
+        console.error("Failed to add task:", err)
+        alert("Failed to add task: " + err.message)
+      })
     }
-    if (!window.electron) {
-      alert("window.electron is undefined!")
-      return
-    }
-    
-    alert("Invoking IPC...")
-    window.electron.ipcRenderer.invoke('store:addTask', { 
-      title: newTaskTitle, 
-      completed: false,
-      estimatedMinutes: 25,
-      date: selectedDate
-    }).then((newTask) => {
-      alert("IPC succeeded! " + JSON.stringify(newTask))
-      setTasks([...tasks, newTask])
-      setNewTaskTitle('')
-      setNewTaskSubtext('')
-      setIsAddingTask(false)
-    }).catch(err => {
-      console.error("Failed to add task:", err)
-      alert("Failed to add task: " + err.message)
-    })
   }
 
   const handleToggleTask = (id: string) => {
