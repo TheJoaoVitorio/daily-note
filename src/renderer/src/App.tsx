@@ -61,8 +61,10 @@ function App() {
   const [totalTime, setTotalTime] = useState(0)
 
   const [hoverTimeout, setHoverTimeout] = useState<NodeJS.Timeout | null>(null)
+  const isTransitioningRef = useRef(false)
 
   const handleMouseEnter = () => {
+    if (isTransitioningRef.current) return
     if (viewState === 'collapsed') {
       // If a stopwatch task is running (totalTime === 0), add a 5s delay to allow clicking the radio button
       const delay = (isRunning && activeTaskData && totalTime === 0) ? 5000 : 0
@@ -74,6 +76,7 @@ function App() {
   }
 
   const handleMouseLeave = () => {
+    if (isTransitioningRef.current) return
     if (hoverTimeout) {
       clearTimeout(hoverTimeout)
       setHoverTimeout(null)
