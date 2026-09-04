@@ -65,7 +65,7 @@ function App() {
   const [totalTime, setTotalTime] = useState(0)
 
   const [hoverTimeout, setHoverTimeout] = useState<NodeJS.Timeout | null>(null)
-  const isTransitioningRef = useRef(false)
+  const isTransitioningRef = useRef(false); const transitionTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
   const handleMouseEnter = () => {
     if (isTransitioningRef.current) return
@@ -281,7 +281,7 @@ function App() {
 
   const handleSetViewState = (newState: 'collapsed' | 'hovered' | 'expanded') => {
     isTransitioningRef.current = true
-    setTimeout(() => { isTransitioningRef.current = false }, 500) // increased to match animation duration
+    if (transitionTimeoutRef.current) clearTimeout(transitionTimeoutRef.current); transitionTimeoutRef.current = setTimeout(() => { isTransitioningRef.current = false }, 500) // increased to match animation duration
 
     if (newState === 'expanded') {
       if (window.electron) window.electron.ipcRenderer.send('window:resize', 'expanded')
