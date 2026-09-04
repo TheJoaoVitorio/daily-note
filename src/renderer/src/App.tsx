@@ -55,7 +55,7 @@ function App() {
   const [isAddingTask, setIsAddingTask] = useState(false)
   const [newTaskTitle, setNewTaskTitle] = useState('')
   const [newTaskSubtext, setNewTaskSubtext] = useState('')
-  const [newTaskMinutes, setNewTaskMinutes] = useState(25)
+  const [newTaskMinutes] = useState(25)
 
   const [viewState, setViewState] = useState<'collapsed' | 'hovered' | 'expanded'>('collapsed')
   const [activeDurationPopover, setActiveDurationPopover] = useState<string | null>(null)
@@ -410,30 +410,30 @@ function App() {
               </div>
               
               <div className="overflow-y-auto space-y-2 custom-scrollbar pr-1 max-h-[116px]">
-                {tasks.map(t => (
+                {tasks.map(task => (
                   <div 
-                    key={t.id} 
+                    key={task.id} 
                     draggable 
-                    onDragStart={(e) => handleDragStart(e, t.id)}
+                    onDragStart={(e) => handleDragStart(e, task.id)}
                     onDragEnd={handleDragEnd}
-                    onDragOver={(e) => handleDragOver(e, t.id)}
-                    className={`bg-[#1a1a1a] p-3 rounded-xl flex items-center justify-between group cursor-grab active:cursor-grabbing ${draggedTaskId === t.id ? 'opacity-50 border border-blue-500/30' : ''}`}
+                    onDragOver={(e) => handleDragOver(e, task.id)}
+                    className={`bg-[#1a1a1a] p-3 rounded-xl flex items-center justify-between group cursor-grab active:cursor-grabbing ${draggedTaskId === task.id ? 'opacity-50 border border-blue-500/30' : ''}`}
                   >
                     <div className="flex items-center gap-3 overflow-hidden">
-                      <button onClick={() => handleToggleTask(t.id)} className="text-white/30 hover:text-white shrink-0">
-                        {t.completed ? <CheckCircle2 size={18} className="text-blue-500" /> : <Circle size={18} />}
+                      <button onClick={() => handleToggleTask(task.id)} className="text-white/30 hover:text-white shrink-0">
+                        {task.completed ? <CheckCircle2 size={18} className="text-blue-500" /> : <Circle size={18} />}
                       </button>
                       <div className="flex flex-col truncate">
-                        <span className={`text-sm font-medium truncate ${t.completed ? 'line-through text-white/40' : 'text-white/90'}`}>{t.title}</span>
+                        <span className={`text-sm font-medium truncate ${task.completed ? 'line-through text-white/40' : 'text-white/90'}`}>{task.title}</span>
                       </div>
                     </div>
                     <button 
-                      onClick={() => isRunning && activeTaskId === t.id ? handleStopTimer() : handleStartTimer(t.id, t.date === 'unscheduled' ? 0 : t.estimatedMinutes)}
+                      onClick={() => isRunning && activeTaskId === task.id ? handleStopTimer() : handleStartTimer(task.id, task.date === 'unscheduled' ? 0 : task.estimatedMinutes)}
                       className={`w-7 h-7 shrink-0 flex items-center justify-center rounded-full transition-colors ${
-                        isRunning && activeTaskId === t.id ? 'bg-red-500 text-white hover:bg-red-600' : 'bg-blue-600 text-white hover:bg-blue-500'
+                        isRunning && activeTaskId === task.id ? 'bg-red-500 text-white hover:bg-red-600' : 'bg-blue-600 text-white hover:bg-blue-500'
                       }`}
                     >
-                      {isRunning && activeTaskId === t.id ? <Square size={10} fill="currentColor" /> : <Play size={10} fill="currentColor" className="ml-0.5" />}
+                      {isRunning && activeTaskId === task.id ? <Square size={10} fill="currentColor" /> : <Play size={10} fill="currentColor" className="ml-0.5" />}
                     </button>
                   </div>
                 ))}
@@ -493,21 +493,21 @@ function App() {
                       <p className="text-sm font-medium">{t('Capture ideas and tasks without a specific date here.')}</p>
                     </div>
                   )}
-                  {tasks.map(t => (
+                  {tasks.map(task => (
                     <div 
-                      key={t.id} 
+                      key={task.id} 
                       className="relative"
                       draggable 
-                      onDragStart={(e) => handleDragStart(e, t.id)}
+                      onDragStart={(e) => handleDragStart(e, task.id)}
                       onDragEnd={handleDragEnd}
-                      onDragOver={(e) => handleDragOver(e, t.id)}
+                      onDragOver={(e) => handleDragOver(e, task.id)}
                     >
-                      <div className={`bg-[#111111] border border-white/5 hover:border-white/10 p-3 rounded-2xl flex items-center justify-between group transition-colors cursor-grab active:cursor-grabbing ${draggedTaskId === t.id ? 'opacity-50 border border-blue-500/30' : ''}`}>
+                      <div className={`bg-[#111111] border border-white/5 hover:border-white/10 p-3 rounded-2xl flex items-center justify-between group transition-colors cursor-grab active:cursor-grabbing ${draggedTaskId === task.id ? 'opacity-50 border border-blue-500/30' : ''}`}>
                         <div className="flex items-center gap-3 overflow-hidden">
-                          <button onClick={() => handleToggleTask(t.id)} className="text-white/30 hover:text-white shrink-0">
-                            {t.completed ? <CheckCircle2 size={18} className="text-blue-500" /> : <Circle size={18} />}
+                          <button onClick={() => handleToggleTask(task.id)} className="text-white/30 hover:text-white shrink-0">
+                            {task.completed ? <CheckCircle2 size={18} className="text-blue-500" /> : <Circle size={18} />}
                           </button>
-                          <span className={`text-sm font-medium truncate ${t.completed ? 'line-through text-white/40' : 'text-white/90'}`}>{t.title}</span>
+                          <span className={`text-sm font-medium truncate ${task.completed ? 'line-through text-white/40' : 'text-white/90'}`}>{task.title}</span>
                         </div>
                         <div className="flex items-center gap-3 shrink-0">
                           <div className="flex items-center gap-2 text-xs text-white/40 bg-[#1a1a1a] px-2 py-1 rounded-lg">
@@ -517,48 +517,48 @@ function App() {
                           {viewMode === 'day' ? (
                             <>
                               <button 
-                                onClick={() => setActiveDurationPopover(activeDurationPopover === t.id ? null : t.id)}
+                                onClick={() => setActiveDurationPopover(activeDurationPopover === task.id ? null : task.id)}
                                 className="flex items-center gap-2 text-xs text-white/40 bg-[#1a1a1a] hover:bg-[#222] transition-colors px-2 py-1 rounded-lg"
                               >
-                                <Clock size={12} /> {t.estimatedMinutes}m
+                                <Clock size={12} /> {task.estimatedMinutes}m
                               </button>
                               <button 
-                                onClick={() => isRunning && activeTaskId === t.id ? handleStopTimer() : handleStartTimer(t.id, t.estimatedMinutes)}
+                                onClick={() => isRunning && activeTaskId === task.id ? handleStopTimer() : handleStartTimer(task.id, task.estimatedMinutes)}
                                 className={`w-7 h-7 flex items-center justify-center rounded-full transition-colors ${
-                                  isRunning && activeTaskId === t.id ? 'bg-red-500 text-white hover:bg-red-600' : 'bg-blue-600 text-white hover:bg-blue-500'
+                                  isRunning && activeTaskId === task.id ? 'bg-red-500 text-white hover:bg-red-600' : 'bg-blue-600 text-white hover:bg-blue-500'
                                 }`}
                               >
-                                {isRunning && activeTaskId === t.id ? <Square size={12} fill="currentColor" /> : <Play size={12} fill="currentColor" className="ml-0.5" />}
+                                {isRunning && activeTaskId === task.id ? <Square size={12} fill="currentColor" /> : <Play size={12} fill="currentColor" className="ml-0.5" />}
                               </button>
                             </>
                           ) : (
                             <button 
-                              onClick={() => isRunning && activeTaskId === t.id ? handleStopTimer() : handleStartTimer(t.id, 0)}
+                              onClick={() => isRunning && activeTaskId === task.id ? handleStopTimer() : handleStartTimer(task.id, 0)}
                               className={`w-7 h-7 flex items-center justify-center rounded-full transition-colors ${
-                                isRunning && activeTaskId === t.id ? 'bg-red-500 text-white hover:bg-red-600' : 'bg-blue-600 text-white hover:bg-blue-500'
+                                isRunning && activeTaskId === task.id ? 'bg-red-500 text-white hover:bg-red-600' : 'bg-blue-600 text-white hover:bg-blue-500'
                               }`}
                             >
-                              {isRunning && activeTaskId === t.id ? <Square size={12} fill="currentColor" /> : <Play size={12} fill="currentColor" className="ml-0.5" />}
+                              {isRunning && activeTaskId === task.id ? <Square size={12} fill="currentColor" /> : <Play size={12} fill="currentColor" className="ml-0.5" />}
                             </button>
                           )}
                           
-                          <button onClick={() => handleDeleteTask(t.id)} className="text-white/20 hover:text-red-400 transition-colors"><Trash2 size={14} /></button>
+                          <button onClick={() => handleDeleteTask(task.id)} className="text-white/20 hover:text-red-400 transition-colors"><Trash2 size={14} /></button>
                         </div>
                       </div>
 
                       {/* Focus duration popover */}
-                      {activeDurationPopover === t.id && (
+                      {activeDurationPopover === task.id && (
                         <div className="absolute right-10 top-full mt-2 bg-[#111111] border border-white/10 rounded-3xl p-5 shadow-2xl z-50 flex flex-col items-center gap-4 animate-in fade-in zoom-in-95 duration-200">
                           <div className="text-sm font-semibold text-white">Focus duration</div>
                           <div className="flex items-center gap-4 text-white">
                             {/* Minutes */}
                             <div className="flex flex-col items-center gap-2">
                               <span className="text-[10px] font-medium text-white/40 tracking-widest uppercase">Min</span>
-                              <button onClick={() => handleUpdateTaskDuration(t.id, 5)} className="text-white/40 hover:text-white transition-colors p-1"><ChevronUp size={16} /></button>
+                              <button onClick={() => handleUpdateTaskDuration(task.id, 5)} className="text-white/40 hover:text-white transition-colors p-1"><ChevronUp size={16} /></button>
                               <div className="w-16 h-12 bg-[#1a1a1a] rounded-xl flex items-center justify-center text-xl font-medium">
-                                {t.estimatedMinutes.toString().padStart(2, '0')}
+                                {task.estimatedMinutes.toString().padStart(2, '0')}
                               </div>
-                              <button onClick={() => handleUpdateTaskDuration(t.id, -5)} className="text-white/40 hover:text-white transition-colors p-1"><ChevronDown size={16} /></button>
+                              <button onClick={() => handleUpdateTaskDuration(task.id, -5)} className="text-white/40 hover:text-white transition-colors p-1"><ChevronDown size={16} /></button>
                             </div>
                             <div className="text-xl font-bold text-white/30 mb-8">:</div>
                             {/* Seconds (Visual only for now since estimation is in minutes) */}
