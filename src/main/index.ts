@@ -25,7 +25,6 @@ function createWindow() {
     frame: false,
     transparent: true,
     alwaysOnTop: true,
-    resizable: false,
     skipTaskbar: true,
     webPreferences: {
       preload: join(__dirname, '../preload/index.cjs'),

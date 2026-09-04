@@ -280,7 +280,6 @@ function createWindow() {
 		frame: false,
 		transparent: true,
 		alwaysOnTop: true,
-		resizable: false,
 		skipTaskbar: true,
 		webPreferences: { preload: (0, path.join)(__dirname, "../preload/index.cjs") }
 	});
