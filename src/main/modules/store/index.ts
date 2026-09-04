@@ -51,6 +51,7 @@ export function setupStore() {
   ipcMain.handle('store:getData', (_, date: string) => readData(date))
   ipcMain.handle('store:addTask', (_, task: Omit<Task, 'id' | 'createdAt'>) => addTask(task))
   ipcMain.handle('store:updateTask', (_, id: string, updates: Partial<Task>) => updateTask(id, updates))
+  ipcMain.handle('store:updateTaskOrder', (_, ids: string[]) => updateTaskOrder(ids))
   ipcMain.handle('store:toggleTask', (_, id: string) => toggleTask(id))
   ipcMain.handle('store:deleteTask', (_, id: string) => deleteTask(id))
 }
@@ -112,6 +113,19 @@ export function updateTask(id: string, updates: Partial<Task>): Task | null {
     ...updatedRow,
     completed: updatedRow.completed === 1
   }
+}
+
+export function updateTaskOrder(orderedIds: string[]) {
+  const now = Date.now()
+  const updateStmt = db.prepare('UPDATE tasks SET createdAt = ? WHERE id = ?')
+  
+  const transaction = db.transaction((ids: string[]) => {
+    ids.forEach((id, index) => {
+      updateStmt.run(now + index, id)
+    })
+  })
+  
+  transaction(orderedIds)
 }
 
 export function toggleTask(id: string): Task | null {

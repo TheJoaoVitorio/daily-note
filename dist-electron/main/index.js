@@ -91,6 +91,7 @@ function setupStore() {
 	electron.ipcMain.handle("store:getData", (_, date) => readData(date));
 	electron.ipcMain.handle("store:addTask", (_, task) => addTask(task));
 	electron.ipcMain.handle("store:updateTask", (_, id, updates) => updateTask(id, updates));
+	electron.ipcMain.handle("store:updateTaskOrder", (_, ids) => updateTaskOrder(ids));
 	electron.ipcMain.handle("store:toggleTask", (_, id) => toggleTask(id));
 	electron.ipcMain.handle("store:deleteTask", (_, id) => deleteTask(id));
 }
@@ -139,6 +140,15 @@ function updateTask(id, updates) {
 		...updatedRow,
 		completed: updatedRow.completed === 1
 	};
+}
+function updateTaskOrder(orderedIds) {
+	const now = Date.now();
+	const updateStmt = db.prepare("UPDATE tasks SET createdAt = ? WHERE id = ?");
+	db.transaction((ids) => {
+		ids.forEach((id, index) => {
+			updateStmt.run(now + index, id);
+		});
+	})(orderedIds);
 }
 function toggleTask(id) {
 	const taskRow = db.prepare("SELECT * FROM tasks WHERE id = ?").get(id);

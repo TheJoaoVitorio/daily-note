@@ -149,6 +149,41 @@ function App() {
     }
   }
 
+  const [draggedTaskId, setDraggedTaskId] = useState<string | null>(null)
+
+  const handleDragStart = (e: React.DragEvent, id: string) => {
+    setDraggedTaskId(id)
+    e.dataTransfer.effectAllowed = 'move'
+    // Optional: Make it slightly transparent while dragging
+    setTimeout(() => {
+      const el = e.target as HTMLElement
+      if (el) el.style.opacity = '0.5'
+    }, 0)
+  }
+
+  const handleDragEnd = (e: React.DragEvent) => {
+    setDraggedTaskId(null)
+    const el = e.target as HTMLElement
+    if (el) el.style.opacity = '1'
+    if (window.electron) {
+      window.electron.ipcRenderer.invoke('store:updateTaskOrder', tasks.map(t => t.id))
+    }
+  }
+
+  const handleDragOver = (e: React.DragEvent, id: string) => {
+    e.preventDefault()
+    if (!draggedTaskId || draggedTaskId === id) return
+
+    const tasksCopy = [...tasks]
+    const draggedIndex = tasksCopy.findIndex(t => t.id === draggedTaskId)
+    const targetIndex = tasksCopy.findIndex(t => t.id === id)
+
+    const [draggedItem] = tasksCopy.splice(draggedIndex, 1)
+    tasksCopy.splice(targetIndex, 0, draggedItem)
+
+    setTasks(tasksCopy)
+  }
+
   const renderCalendar = () => {
     const year = currentMonth.getFullYear()
     const month = currentMonth.getMonth()
@@ -295,9 +330,16 @@ function App() {
                 </button>
               </div>
               
-              <div className="flex-1 overflow-y-auto space-y-2 custom-scrollbar pr-1">
-                {tasks.slice(0, 3).map(t => (
-                  <div key={t.id} className="bg-[#1a1a1a] p-3 rounded-xl flex items-center justify-between group">
+              <div className="overflow-y-auto space-y-2 custom-scrollbar pr-1 max-h-[116px]">
+                {tasks.map(t => (
+                  <div 
+                    key={t.id} 
+                    draggable 
+                    onDragStart={(e) => handleDragStart(e, t.id)}
+                    onDragEnd={handleDragEnd}
+                    onDragOver={(e) => handleDragOver(e, t.id)}
+                    className={`bg-[#1a1a1a] p-3 rounded-xl flex items-center justify-between group cursor-grab active:cursor-grabbing ${draggedTaskId === t.id ? 'opacity-50 border border-blue-500/30' : ''}`}
+                  >
                     <div className="flex items-center gap-3 overflow-hidden">
                       <button onClick={() => handleToggleTask(t.id)} className="text-white/30 hover:text-white shrink-0">
                         {t.completed ? <CheckCircle2 size={18} className="text-blue-500" /> : <Circle size={18} />}
@@ -358,8 +400,15 @@ function App() {
 
                 <div className="flex-1 overflow-y-auto space-y-2 custom-scrollbar pr-2 pb-32">
                   {tasks.map(t => (
-                    <div key={t.id} className="relative">
-                      <div className="bg-[#111111] border border-white/5 hover:border-white/10 p-3 rounded-2xl flex items-center justify-between group transition-colors">
+                    <div 
+                      key={t.id} 
+                      className="relative"
+                      draggable 
+                      onDragStart={(e) => handleDragStart(e, t.id)}
+                      onDragEnd={handleDragEnd}
+                      onDragOver={(e) => handleDragOver(e, t.id)}
+                    >
+                      <div className={`bg-[#111111] border border-white/5 hover:border-white/10 p-3 rounded-2xl flex items-center justify-between group transition-colors cursor-grab active:cursor-grabbing ${draggedTaskId === t.id ? 'opacity-50 border border-blue-500/30' : ''}`}>
                         <div className="flex items-center gap-3 overflow-hidden">
                           <button onClick={() => handleToggleTask(t.id)} className="text-white/30 hover:text-white shrink-0">
                             {t.completed ? <CheckCircle2 size={18} className="text-blue-500" /> : <Circle size={18} />}
