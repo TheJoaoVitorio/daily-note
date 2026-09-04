@@ -100,7 +100,8 @@ function readData(targetDate) {
 		tasks: [],
 		activity: [],
 		focusMinutes: 25,
-		streak: 0
+		streak: 0,
+		unscheduledCount: 0
 	};
 	const mappedTasks = db.prepare("SELECT * FROM tasks WHERE date = ? ORDER BY createdAt ASC").all(targetDate).map((t) => ({
 		...t,
@@ -109,11 +110,13 @@ function readData(targetDate) {
 	const activity = db.prepare("SELECT date, completedCount FROM activity ORDER BY date DESC LIMIT 60").all();
 	const streakRow = db.prepare("SELECT value FROM settings WHERE key = 'streak'").get();
 	const focusRow = db.prepare("SELECT value FROM settings WHERE key = 'focusMinutes'").get();
+	const unscheduledCountRow = db.prepare("SELECT COUNT(*) as count FROM tasks WHERE date = 'unscheduled'").get();
 	return {
 		tasks: mappedTasks,
 		activity,
 		streak: streakRow ? parseInt(streakRow.value) : 0,
-		focusMinutes: focusRow ? parseInt(focusRow.value) : 25
+		focusMinutes: focusRow ? parseInt(focusRow.value) : 25,
+		unscheduledCount: unscheduledCountRow ? unscheduledCountRow.count : 0
 	};
 }
 function addTask(taskData) {

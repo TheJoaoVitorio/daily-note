@@ -18,4 +18,5 @@ export interface StoreData {
   activity: ActivityDay[]
   focusMinutes: number
   streak: number
+  unscheduledCount: number
 }

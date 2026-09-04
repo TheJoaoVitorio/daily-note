@@ -57,7 +57,7 @@ export function setupStore() {
 }
 
 export function readData(targetDate: string): StoreData {
-  if (!db) return { tasks: [], activity: [], focusMinutes: 25, streak: 0 }
+  if (!db) return { tasks: [], activity: [], focusMinutes: 25, streak: 0, unscheduledCount: 0 }
 
   const tasks = db.prepare('SELECT * FROM tasks WHERE date = ? ORDER BY createdAt ASC').all(targetDate) as any[]
   const mappedTasks: Task[] = tasks.map(t => ({
@@ -70,11 +70,14 @@ export function readData(targetDate: string): StoreData {
   const streakRow = db.prepare("SELECT value FROM settings WHERE key = 'streak'").get() as any
   const focusRow = db.prepare("SELECT value FROM settings WHERE key = 'focusMinutes'").get() as any
 
+  const unscheduledCountRow = db.prepare("SELECT COUNT(*) as count FROM tasks WHERE date = 'unscheduled'").get() as any
+
   return {
     tasks: mappedTasks,
     activity,
     streak: streakRow ? parseInt(streakRow.value) : 0,
-    focusMinutes: focusRow ? parseInt(focusRow.value) : 25
+    focusMinutes: focusRow ? parseInt(focusRow.value) : 25,
+    unscheduledCount: unscheduledCountRow ? unscheduledCountRow.count : 0
   }
 }
 

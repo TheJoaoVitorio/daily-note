@@ -37,17 +37,22 @@ const Heatmap = ({ activity }: { activity: ActivityDay[] }) => {
 }
 
 function App() {
-  const [viewState, setViewState] = useState<'collapsed' | 'hovered' | 'expanded'>('collapsed')
+  const [selectedDate, setSelectedDate] = useState(formatDate(new Date()))
+  const [viewMode, setViewMode] = useState<'day' | 'unscheduled'>('day')
   const [tasks, setTasks] = useState<Task[]>([])
   const [activity, setActivity] = useState<ActivityDay[]>([])
-  const [timeRemaining, setTimeRemaining] = useState(0)
+  const [unscheduledCount, setUnscheduledCount] = useState(0)
+
   const [isRunning, setIsRunning] = useState(false)
+  const [timeRemaining, setTimeRemaining] = useState(0)
+  const [activeTaskId, setActiveTaskId] = useState<string | null>(null)
   
-  const [selectedDate, setSelectedDate] = useState(formatDate(new Date()))
   const [isAddingTask, setIsAddingTask] = useState(false)
   const [newTaskTitle, setNewTaskTitle] = useState('')
   const [newTaskSubtext, setNewTaskSubtext] = useState('')
-  const [activeTaskId, setActiveTaskId] = useState<string | null>(null)
+  const [newTaskMinutes, setNewTaskMinutes] = useState(25)
+
+  const [viewState, setViewState] = useState<'collapsed' | 'hovered' | 'expanded'>('collapsed')
   const [activeDurationPopover, setActiveDurationPopover] = useState<string | null>(null)
 
   const [currentMonth, setCurrentMonth] = useState(new Date())
@@ -59,13 +64,18 @@ function App() {
       window.electron.ipcRenderer.invoke('store:getData', date).then((data: StoreData) => {
         setTasks(data.tasks)
         setActivity(data.activity)
+        setUnscheduledCount(data.unscheduledCount)
       }).catch(err => console.error("Error loading data:", err))
     }
   }
 
   useEffect(() => {
-    loadData(selectedDate)
-  }, [selectedDate])
+    if (viewMode === 'day') {
+      loadData(selectedDate)
+    } else {
+      loadData('unscheduled')
+    }
+  }, [selectedDate, viewMode])
 
   useEffect(() => {
     if (window.electron) {
@@ -76,10 +86,10 @@ function App() {
         if (data.isRunning && data.taskId) setActiveTaskId(data.taskId)
       })
       window.electron.ipcRenderer.on('timer:finished', () => {
-        loadData(selectedDate)
+        loadData(viewMode === 'day' ? selectedDate : 'unscheduled')
       })
     }
-  }, [selectedDate])
+  }, [selectedDate, viewMode])
 
   const formatTime = (seconds: number) => {
     const m = Math.floor(seconds / 60).toString().padStart(2, '0')
@@ -98,14 +108,16 @@ function App() {
   }
 
   const handleAddTask = () => {
-    if (newTaskTitle.trim() && window.electron) {
-      window.electron.ipcRenderer.invoke('store:addTask', { 
-        title: newTaskTitle, 
+    if (!newTaskTitle.trim()) return
+    if (window.electron) {
+      const task = {
+        title: newTaskTitle,
         completed: false,
-        estimatedMinutes: 25,
-        date: selectedDate
-      }).then((newTask) => {
-        setTasks([...tasks, newTask])
+        estimatedMinutes: newTaskMinutes,
+        date: viewMode === 'unscheduled' ? 'unscheduled' : selectedDate
+      }
+      window.electron.ipcRenderer.invoke('store:addTask', task).then(() => {
+        loadData(viewMode === 'day' ? selectedDate : 'unscheduled')
         setNewTaskTitle('')
         setNewTaskSubtext('')
         setIsAddingTask(false)
@@ -391,14 +403,26 @@ function App() {
 
               <div className="flex flex-col min-h-0 bg-[#0a0a0a] rounded-2xl relative">
                 <div className="flex justify-between items-center mb-4 text-white">
-                  <span className="font-semibold">Today</span>
+                  <span className="font-semibold">{viewMode === 'day' ? 'Today' : 'Unscheduled'}</span>
                   <div className="flex bg-[#1a1a1a] rounded-full p-0.5">
-                    <button className="px-3 py-1 text-xs font-medium bg-blue-600 text-white rounded-full">Day</button>
-                    <button className="px-3 py-1 text-xs font-medium text-white/50 hover:text-white">Unscheduled 0</button>
+                    <button 
+                      onClick={() => setViewMode('day')}
+                      className={`px-3 py-1 text-xs font-medium rounded-full transition-colors ${viewMode === 'day' ? 'bg-blue-600 text-white' : 'text-white/50 hover:text-white'}`}
+                    >Day</button>
+                    <button 
+                      onClick={() => setViewMode('unscheduled')}
+                      className={`px-3 py-1 text-xs font-medium rounded-full transition-colors ${viewMode === 'unscheduled' ? 'bg-blue-600 text-white' : 'text-white/50 hover:text-white'}`}
+                    >Unscheduled {unscheduledCount > 0 ? unscheduledCount : ''}</button>
                   </div>
                 </div>
 
                 <div className="flex-1 overflow-y-auto space-y-2 custom-scrollbar pr-2 pb-32">
+                  {tasks.length === 0 && viewMode === 'unscheduled' && !isAddingTask && (
+                    <div className="flex flex-col items-center justify-center h-full text-center p-6 space-y-3 opacity-50 mt-10">
+                      <ListTodo size={32} />
+                      <p className="text-sm font-medium">Capture ideas and tasks without a specific date here.</p>
+                    </div>
+                  )}
                   {tasks.map(t => (
                     <div 
                       key={t.id} 
@@ -417,7 +441,7 @@ function App() {
                         </div>
                         <div className="flex items-center gap-3 shrink-0">
                           <div className="flex items-center gap-2 text-xs text-white/40 bg-[#1a1a1a] px-2 py-1 rounded-lg">
-                            <CalendarIcon size={12} /> Today
+                            {viewMode === 'unscheduled' ? <><ListTodo size={12} /> Someday</> : <><CalendarIcon size={12} /> Today</>}
                           </div>
                           <button 
                             onClick={() => setActiveDurationPopover(activeDurationPopover === t.id ? null : t.id)}
