@@ -69,7 +69,7 @@ app.whenReady().then(() => {
       targetHeight = 360
     } else if (state === 'expanded') {
       targetWidth = 800
-      targetHeight = 600
+      targetHeight = 620
     }
 
     window.setBounds({

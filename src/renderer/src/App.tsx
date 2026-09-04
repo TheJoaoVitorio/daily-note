@@ -135,6 +135,7 @@ function App() {
 
   const [viewState, setViewState] = useState<'collapsed' | 'hovered' | 'expanded'>('collapsed')
   const [activeDurationPopover, setActiveDurationPopover] = useState<string | null>(null)
+  const [activeCategoryPopover, setActiveCategoryPopover] = useState<string | null>(null)
 
   const [currentMonth, setCurrentMonth] = useState(new Date())
 
@@ -196,6 +197,17 @@ function App() {
       if (selectedCategoryId === id) setSelectedCategoryId(null)
       loadData(viewMode === 'day' ? selectedDate : 'unscheduled')
     })
+  }
+
+  const handleUpdateTaskCategory = (id: string, categoryId: string | null) => {
+    if (window.electron) {
+      window.electron.ipcRenderer.invoke('store:updateTask', id, { categoryId }).then((updatedTask) => {
+        if (updatedTask) {
+          setTasks(tasks.map(task => task.id === id ? updatedTask : task))
+          loadData(viewMode === 'day' ? selectedDate : 'unscheduled')
+        }
+      })
+    }
   }
 
   useEffect(() => {
@@ -371,7 +383,7 @@ function App() {
         
         <div className="mt-auto">
           <button onClick={() => setSelectedDate(formatDate(new Date()))} className="w-full py-2 bg-[#1a1a1a] hover:bg-[#222] rounded-xl text-xs font-medium text-white transition-colors">
-            Today
+            {t('Today')}
           </button>
         </div>
       </div>
@@ -414,11 +426,11 @@ function App() {
   }
 
   let containerClass = "w-64 h-12"
-  if (viewState === 'hovered') containerClass = "w-[540px] h-[260px]"
-  if (viewState === 'expanded') containerClass = "w-[760px] h-[520px]"
+  if (viewState === 'hovered') containerClass = "w-[540px] h-[270px]"
+  if (viewState === 'expanded') containerClass = "w-[760px] h-[550px]"
 
   return (
-    <div className="w-full h-full flex justify-center pt-2 select-none relative group text-white">
+    <div className="w-full h-full flex justify-center pt-1 select-none relative group text-white">
       {/* Drag handle */}
       <div 
         className="absolute top-0 w-32 h-2 cursor-grab opacity-0 group-hover:opacity-100 flex justify-center items-center z-50"
@@ -428,7 +440,7 @@ function App() {
       </div>
 
       <div 
-        className={`bg-[#050505] backdrop-blur-3xl rounded-[32px] shadow-2xl transition-all duration-500 ease-[cubic-bezier(0.23,1,0.32,1)] overflow-hidden flex flex-col mt-2 border border-white/10 ${
+        className={`bg-[#050505] backdrop-blur-3xl rounded-[32px] shadow-2xl transition-all duration-500 ease-[cubic-bezier(0.23,1,0.32,1)] overflow-hidden flex flex-col mt-1 border border-white/10 ${
           isRunning && viewState === 'collapsed' ? 'shadow-blue-900/20' : ''
         } ${containerClass} relative`}
         onMouseEnter={handleMouseEnter}
@@ -562,8 +574,8 @@ function App() {
 
         {/* EXPANDED STATE (FULL DASHBOARD) */}
         {viewState === 'expanded' && (
-          <div className="flex-1 flex flex-col p-4 animate-in fade-in duration-300">
-            <div className="flex justify-between items-center mb-4 px-2 text-white">
+          <div className="flex-1 flex flex-col p-5 animate-in fade-in duration-300">
+            <div className="flex justify-between items-center mb-3 px-1 text-white">
               <span className="font-semibold text-sm flex items-center gap-2">
                 <ListTodo size={16} className="text-white/70" /> {t('Tasks')}
               </span>
@@ -581,8 +593,8 @@ function App() {
             <div className="flex-1 grid grid-cols-[260px_1fr] gap-4 min-h-0">
               {renderCalendar()}
 
-              <div className="flex flex-col min-h-0 bg-[#0a0a0a] rounded-2xl relative">
-                <div className="flex justify-between items-center mb-4 text-white">
+              <div className="flex flex-col min-h-0 bg-[#0a0a0a] rounded-2xl p-4 relative">
+                <div className="flex justify-between items-center mb-3 text-white">
                   <span className="font-semibold">{viewMode === 'day' ? t('Today') : t('Unscheduled')}</span>
                   <div className="flex bg-[#1a1a1a] rounded-full p-0.5">
                     <button 
@@ -596,7 +608,7 @@ function App() {
                   </div>
                 </div>
 
-                <div className="flex-1 overflow-y-auto space-y-2 custom-scrollbar pr-2 pb-32">
+                <div className="flex-1 min-h-0 overflow-y-auto space-y-2 custom-scrollbar pr-1 pb-1">
                   {tasks.length === 0 && viewMode === 'unscheduled' && !isAddingTask && (
                     <div className="flex flex-col items-center justify-center h-full text-center p-6 space-y-3 opacity-50 mt-10">
                       <ListTodo size={32} />
@@ -620,23 +632,68 @@ function App() {
                           <span className={`text-sm font-medium truncate ${task.completed ? 'line-through text-white/40' : 'text-white/90'}`}>{task.title}</span>
                         </div>
                         <div className="flex items-center gap-2 shrink-0">
-                          {task.categoryId && (() => {
-                            const cat = categories.find(c => c.id === task.categoryId)
-                            if (!cat) return null
-                            return (
-                              <span 
-                                className="flex items-center gap-1.5 text-xs px-2 py-1 rounded-lg border" 
-                                style={{ 
-                                  backgroundColor: `${cat.color}15`, 
-                                  color: cat.color, 
-                                  borderColor: `${cat.color}30` 
-                                }}
-                              >
-                                <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: cat.color }} />
-                                {t(cat.name as any) || cat.name}
-                              </span>
-                            )
-                          })()}
+                          {/* Category badge & quick selector */}
+                          <div className="relative">
+                            <button
+                              type="button"
+                              onClick={() => setActiveCategoryPopover(activeCategoryPopover === task.id ? null : task.id)}
+                              className="flex items-center gap-1.5 text-xs px-2 py-1 rounded-lg border transition-colors hover:brightness-125"
+                              style={{
+                                backgroundColor: task.categoryId && categories.find(c => c.id === task.categoryId) ? `${categories.find(c => c.id === task.categoryId)!.color}15` : '#1a1a1a',
+                                color: task.categoryId && categories.find(c => c.id === task.categoryId) ? categories.find(c => c.id === task.categoryId)!.color : 'rgba(255,255,255,0.4)',
+                                borderColor: task.categoryId && categories.find(c => c.id === task.categoryId) ? `${categories.find(c => c.id === task.categoryId)!.color}30` : 'rgba(255,255,255,0.08)'
+                              }}
+                              title={t('Category')}
+                            >
+                              {task.categoryId && categories.find(c => c.id === task.categoryId) ? (
+                                <>
+                                  <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: categories.find(c => c.id === task.categoryId)!.color }} />
+                                  {t(categories.find(c => c.id === task.categoryId)!.name as any) || categories.find(c => c.id === task.categoryId)!.name}
+                                </>
+                              ) : (
+                                <>
+                                  <Tag size={11} />
+                                  <span className="text-[10px]">{t('Category')}</span>
+                                </>
+                              )}
+                            </button>
+
+                            {/* Category change popover */}
+                            {activeCategoryPopover === task.id && (
+                              <div className="absolute right-0 top-full mt-1 bg-[#161616] border border-white/10 rounded-xl p-1.5 shadow-2xl z-50 flex flex-col gap-1 min-w-[130px] animate-in fade-in zoom-in-95 duration-150">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    handleUpdateTaskCategory(task.id, null)
+                                    setActiveCategoryPopover(null)
+                                  }}
+                                  className={`flex items-center gap-2 px-2 py-1 rounded-lg text-xs transition-colors text-left ${
+                                    !task.categoryId ? 'bg-white/10 text-white font-medium' : 'text-white/60 hover:text-white hover:bg-white/5'
+                                  }`}
+                                >
+                                  <span className="w-2 h-2 rounded-full border border-white/30" />
+                                  {t('No category')}
+                                </button>
+                                {categories.map(c => (
+                                  <button
+                                    key={c.id}
+                                    type="button"
+                                    onClick={() => {
+                                      handleUpdateTaskCategory(task.id, c.id)
+                                      setActiveCategoryPopover(null)
+                                    }}
+                                    className={`flex items-center gap-2 px-2 py-1 rounded-lg text-xs transition-colors text-left ${
+                                      task.categoryId === c.id ? 'bg-white/10 text-white font-medium' : 'text-white/60 hover:text-white hover:bg-white/5'
+                                    }`}
+                                  >
+                                    <span className="w-2 h-2 rounded-full" style={{ backgroundColor: c.color }} />
+                                    {t(c.name as any) || c.name}
+                                  </button>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+
                           <div className="flex items-center gap-2 text-xs text-white/40 bg-[#1a1a1a] px-2 py-1 rounded-lg">
                             {viewMode === 'unscheduled' ? <><ListTodo size={12} /> {t('Unscheduled')}</> : <><CalendarIcon size={12} /> {t('Today')}</>}
                           </div>
