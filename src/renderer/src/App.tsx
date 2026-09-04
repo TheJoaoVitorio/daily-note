@@ -60,6 +60,29 @@ function App() {
 
   const [totalTime, setTotalTime] = useState(0)
 
+  const [hoverTimeout, setHoverTimeout] = useState<NodeJS.Timeout | null>(null)
+
+  const handleMouseEnter = () => {
+    if (viewState === 'collapsed') {
+      // If a stopwatch task is running (totalTime === 0), add a 5s delay to allow clicking the radio button
+      const delay = (isRunning && activeTaskData && totalTime === 0) ? 5000 : 0
+      const timeout = setTimeout(() => {
+        handleSetViewState('hovered')
+      }, delay)
+      setHoverTimeout(timeout)
+    }
+  }
+
+  const handleMouseLeave = () => {
+    if (hoverTimeout) {
+      clearTimeout(hoverTimeout)
+      setHoverTimeout(null)
+    }
+    if (viewState === 'hovered') {
+      handleSetViewState('collapsed')
+    }
+  }
+
   const loadData = (date: string) => {
     if (window.electron) {
       window.electron.ipcRenderer.invoke('store:getData', date).then((data: StoreData) => {
@@ -99,9 +122,18 @@ function App() {
     return `${m}:${s}`
   }
 
-  const handleStartTimer = (taskId: string, minutes: number) => {
-    setActiveTaskId(taskId)
-    if (window.electron) window.electron.ipcRenderer.invoke('timer:start', taskId, minutes)
+  const handleStartTimer = (id: string, minutes: number) => {
+    if (window.electron) window.electron.ipcRenderer.invoke('timer:start', id, minutes)
+  }
+
+  const handleStartUnscheduled = (id: string) => {
+    if (window.electron) {
+      const today = formatDate(new Date())
+      window.electron.ipcRenderer.invoke('store:updateTask', id, { date: today }).then(() => {
+        loadData(viewMode === 'day' ? selectedDate : 'unscheduled')
+        handleStartTimer(id, 0)
+      })
+    }
   }
 
   const handleStopTimer = () => {
@@ -301,8 +333,8 @@ function App() {
         className={`bg-[#050505] backdrop-blur-3xl rounded-[32px] shadow-2xl transition-all duration-500 ease-[cubic-bezier(0.23,1,0.32,1)] overflow-hidden flex flex-col mt-2 border border-white/10 ${
           isRunning && viewState === 'collapsed' ? 'shadow-blue-900/20' : ''
         } ${containerClass} relative`}
-        onMouseEnter={() => { if (viewState === 'collapsed') handleSetViewState('hovered') }}
-        onMouseLeave={() => { if (viewState === 'hovered') handleSetViewState('collapsed') }}
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
       >
         {/* PROGRESS BAR */}
         {isRunning && totalTime > 0 && viewState === 'collapsed' && (
@@ -478,7 +510,7 @@ function App() {
                             </>
                           ) : (
                             <button 
-                              onClick={() => isRunning && activeTaskId === t.id ? handleStopTimer() : handleStartTimer(t.id, 0)}
+                              onClick={() => isRunning && activeTaskId === t.id ? handleStopTimer() : handleStartUnscheduled(t.id)}
                               className={`w-7 h-7 flex items-center justify-center rounded-full transition-colors ${
                                 isRunning && activeTaskId === t.id ? 'bg-red-500 text-white hover:bg-red-600' : 'bg-blue-600 text-white hover:bg-blue-500'
                               }`}

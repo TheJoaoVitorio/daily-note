@@ -1,4 +1,4 @@
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen, fireEvent, act } from '@testing-library/react'
 import { describe, it, expect, vi } from 'vitest'
 import App from './App'
 
@@ -9,19 +9,27 @@ describe('App component', () => {
   })
 
   it('expands dashboard on hover', () => {
+    vi.useFakeTimers()
     render(<App />)
     const pill = screen.getByText('Ready to Focus').closest('.group > div:nth-child(2)')
     expect(pill).toBeDefined()
     
     if (pill) {
       fireEvent.mouseEnter(pill)
+      act(() => {
+        vi.runAllTimers()
+      })
       expect(pill.className).toContain('w-[540px]') // Hovered width
 
       // In hovered state, 'Journey Streak' should be visible
       expect(screen.getByText(/Journey Streak/)).toBeDefined()
       
       fireEvent.mouseLeave(pill)
+      act(() => {
+        vi.runAllTimers()
+      })
       expect(pill.className).toContain('w-64') // Collapsed width
     }
+    vi.useRealTimers()
   })
 })
