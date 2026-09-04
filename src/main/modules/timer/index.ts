@@ -1,5 +1,5 @@
 import { ipcMain, BrowserWindow, Notification } from 'electron'
-import { completeTask } from '../store'
+import { completeTask, getTask } from '../store'
 
 let interval: NodeJS.Timeout | null = null
 let timeRemaining = 0
@@ -10,7 +10,13 @@ let currentTaskId: string | null = null
 export function setupTimer() {
   ipcMain.handle('timer:start', (_, taskId: string, minutes: number) => startTimer(taskId, minutes))
   ipcMain.handle('timer:stop', () => stopTimer())
-  ipcMain.handle('timer:status', () => ({ isRunning, timeRemaining, totalTime, taskId: currentTaskId }))
+  ipcMain.handle('timer:status', () => ({ 
+    isRunning, 
+    timeRemaining, 
+    totalTime, 
+    taskId: currentTaskId,
+    task: currentTaskId ? getTask(currentTaskId) : null
+  }))
 }
 
 export function startTimer(taskId: string, minutes: number) {
@@ -54,9 +60,17 @@ export function stopTimer() {
 }
 
 function broadcastTick() {
+  const task = currentTaskId ? getTask(currentTaskId) : null
+  const payload = {
+    isRunning,
+    timeRemaining,
+    totalTime,
+    taskId: currentTaskId,
+    task
+  }
   const windows = BrowserWindow.getAllWindows()
   windows.forEach(win => {
-    win.webContents.send('timer:tick', { isRunning, timeRemaining, totalTime, taskId: currentTaskId })
+    win.webContents.send('timer:tick', payload)
   })
 }
 

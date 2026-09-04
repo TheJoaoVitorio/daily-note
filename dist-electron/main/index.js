@@ -144,6 +144,15 @@ function updateTask(id, updates) {
 		completed: updatedRow.completed === 1
 	};
 }
+function getTask(id) {
+	if (!db) return null;
+	const row = db.prepare("SELECT * FROM tasks WHERE id = ?").get(id);
+	if (!row) return null;
+	return {
+		...row,
+		completed: row.completed === 1
+	};
+}
 function updateTaskOrder(orderedIds) {
 	const now = Date.now();
 	const updateStmt = db.prepare("UPDATE tasks SET createdAt = ? WHERE id = ?");
@@ -206,7 +215,8 @@ function setupTimer() {
 		isRunning: isRunning$1,
 		timeRemaining,
 		totalTime,
-		taskId: currentTaskId
+		taskId: currentTaskId,
+		task: currentTaskId ? getTask(currentTaskId) : null
 	}));
 }
 function startTimer(taskId, minutes) {
@@ -244,13 +254,16 @@ function stopTimer() {
 	broadcastTick();
 }
 function broadcastTick() {
+	const task = currentTaskId ? getTask(currentTaskId) : null;
+	const payload = {
+		isRunning: isRunning$1,
+		timeRemaining,
+		totalTime,
+		taskId: currentTaskId,
+		task
+	};
 	electron.BrowserWindow.getAllWindows().forEach((win) => {
-		win.webContents.send("timer:tick", {
-			isRunning: isRunning$1,
-			timeRemaining,
-			totalTime,
-			taskId: currentTaskId
-		});
+		win.webContents.send("timer:tick", payload);
 	});
 }
 function showNotification(title, body) {

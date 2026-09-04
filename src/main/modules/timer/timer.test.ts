@@ -2,7 +2,8 @@ import { describe, it, vi, beforeEach, afterEach } from 'vitest'
 import { startTimer, stopTimer } from './index'
 
 vi.mock('../store', () => ({
-  completeTask: vi.fn()
+  completeTask: vi.fn(),
+  getTask: vi.fn(() => ({ id: '1', title: 'Test Task' }))
 }))
 
 vi.mock('electron', () => ({

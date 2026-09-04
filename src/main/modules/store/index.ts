@@ -118,6 +118,16 @@ export function updateTask(id: string, updates: Partial<Task>): Task | null {
   }
 }
 
+export function getTask(id: string): Task | null {
+  if (!db) return null
+  const row = db.prepare('SELECT * FROM tasks WHERE id = ?').get(id) as any
+  if (!row) return null
+  return {
+    ...row,
+    completed: row.completed === 1
+  }
+}
+
 export function updateTaskOrder(orderedIds: string[]) {
   const now = Date.now()
   const updateStmt = db.prepare('UPDATE tasks SET createdAt = ? WHERE id = ?')

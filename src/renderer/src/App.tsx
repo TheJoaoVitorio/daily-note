@@ -46,6 +46,7 @@ function App() {
   const [isRunning, setIsRunning] = useState(false)
   const [timeRemaining, setTimeRemaining] = useState(0)
   const [activeTaskId, setActiveTaskId] = useState<string | null>(null)
+  const [activeTaskData, setActiveTaskData] = useState<Task | null>(null)
   
   const [isAddingTask, setIsAddingTask] = useState(false)
   const [newTaskTitle, setNewTaskTitle] = useState('')
@@ -79,10 +80,11 @@ function App() {
 
   useEffect(() => {
     if (window.electron) {
-      window.electron.ipcRenderer.on('timer:tick', (data: { isRunning: boolean, timeRemaining: number, totalTime: number, taskId: string | null }) => {
+      window.electron.ipcRenderer.on('timer:tick', (data: { isRunning: boolean, timeRemaining: number, totalTime: number, taskId: string | null, task: Task | null }) => {
         setIsRunning(data.isRunning)
         setTimeRemaining(data.timeRemaining)
         setTotalTime(data.totalTime)
+        setActiveTaskData(data.task || null)
         if (data.isRunning && data.taskId) setActiveTaskId(data.taskId)
       })
       window.electron.ipcRenderer.on('timer:finished', () => {
@@ -281,8 +283,6 @@ function App() {
     }
   }
 
-  const activeTask = tasks.find(t => t.id === activeTaskId)
-
   let containerClass = "w-64 h-12"
   if (viewState === 'hovered') containerClass = "w-[540px] h-[260px]"
   if (viewState === 'expanded') containerClass = "w-[760px] h-[520px]"
@@ -316,11 +316,11 @@ function App() {
         {viewState === 'collapsed' && (
           <div className="flex items-center justify-between px-4 h-full">
             <div className="flex items-center space-x-3 text-white overflow-hidden">
-              {isRunning && activeTask && totalTime === 0 ? (
+              {isRunning && activeTaskData && totalTime === 0 ? (
                 <button 
                   onClick={(e) => {
                     e.stopPropagation();
-                    handleToggleTask(activeTask.id);
+                    handleToggleTask(activeTaskData.id);
                     handleStopTimer();
                   }} 
                   className="text-white/30 hover:text-white shrink-0 group-hover/radio:text-white"
@@ -331,7 +331,7 @@ function App() {
                 <div className={`w-2.5 h-2.5 rounded-full shrink-0 ${isRunning ? 'bg-blue-500' : 'bg-green-400'}`}></div>
               )}
               <span className="text-sm font-medium truncate">
-                {isRunning && activeTask ? activeTask.title : 'Ready to Focus'}
+                {isRunning && activeTaskData ? activeTaskData.title : 'Ready to Focus'}
               </span>
             </div>
             {isRunning && totalTime > 0 && (
