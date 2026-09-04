@@ -271,10 +271,10 @@ var win = null;
 function createWindow() {
 	const { screen } = require("electron");
 	const { width } = screen.getPrimaryDisplay().workAreaSize;
-	const windowWidth = 800;
+	const windowWidth = 320;
 	win = new electron.BrowserWindow({
 		width: windowWidth,
-		height: 600,
+		height: 120,
 		x: Math.floor(width / 2 - windowWidth / 2),
 		y: 0,
 		frame: false,
@@ -294,6 +294,30 @@ electron.app.whenReady().then(() => {
 	setupShortcuts();
 	createWindow();
 	setupTray();
+	electron.ipcMain.on("window:resize", (event, state) => {
+		const window = electron.BrowserWindow.fromWebContents(event.sender);
+		if (!window) return;
+		const { screen } = require("electron");
+		const { width: screenWidth } = screen.getPrimaryDisplay().workAreaSize;
+		let targetWidth = 800;
+		let targetHeight = 600;
+		if (state === "collapsed") {
+			targetWidth = 320;
+			targetHeight = 120;
+		} else if (state === "hovered") {
+			targetWidth = 600;
+			targetHeight = 360;
+		} else if (state === "expanded") {
+			targetWidth = 800;
+			targetHeight = 600;
+		}
+		window.setBounds({
+			x: Math.floor(screenWidth / 2 - targetWidth / 2),
+			y: 0,
+			width: targetWidth,
+			height: targetHeight
+		});
+	});
 });
 electron.app.on("window-all-closed", () => {
 	cleanupShortcuts();

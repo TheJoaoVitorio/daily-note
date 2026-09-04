@@ -200,6 +200,38 @@ function App() {
     )
   }
 
+  const handleSetViewState = (newState: 'collapsed' | 'hovered' | 'expanded') => {
+    if (newState === 'expanded') {
+      if (window.electron) window.electron.ipcRenderer.send('window:resize', 'expanded')
+      setViewState('expanded')
+    } else if (newState === 'hovered') {
+      if (viewState === 'collapsed') {
+        if (window.electron) window.electron.ipcRenderer.send('window:resize', 'hovered')
+        setViewState('hovered')
+      } else if (viewState === 'expanded') {
+        setViewState('hovered')
+        setTimeout(() => {
+          setViewState(curr => {
+            if (curr === 'hovered') {
+              if (window.electron) window.electron.ipcRenderer.send('window:resize', 'hovered')
+            }
+            return curr
+          })
+        }, 500)
+      }
+    } else if (newState === 'collapsed') {
+      setViewState('collapsed')
+      setTimeout(() => {
+        setViewState(curr => {
+          if (curr === 'collapsed') {
+            if (window.electron) window.electron.ipcRenderer.send('window:resize', 'collapsed')
+          }
+          return curr
+        })
+      }, 500)
+    }
+  }
+
   const activeTask = tasks.find(t => t.id === activeTaskId)
 
   let containerClass = "w-64 h-12"
@@ -220,8 +252,8 @@ function App() {
         className={`bg-[#050505] backdrop-blur-3xl rounded-[32px] shadow-2xl transition-all duration-500 ease-[cubic-bezier(0.23,1,0.32,1)] overflow-hidden flex flex-col mt-2 border border-white/10 ${
           isRunning && viewState === 'collapsed' ? 'shadow-blue-900/20' : ''
         } ${containerClass} relative`}
-        onMouseEnter={() => { if (viewState === 'collapsed') setViewState('hovered') }}
-        onMouseLeave={() => { if (viewState === 'hovered') setViewState('collapsed') }}
+        onMouseEnter={() => { if (viewState === 'collapsed') handleSetViewState('hovered') }}
+        onMouseLeave={() => { if (viewState === 'hovered') handleSetViewState('collapsed') }}
       >
         {/* PROGRESS BAR */}
         {isRunning && totalTime > 0 && viewState === 'collapsed' && (
@@ -258,7 +290,7 @@ function App() {
                   <ListTodo size={16} className="text-white/70" />
                   <span className="font-semibold text-sm">To do</span>
                 </div>
-                <button onClick={() => setViewState('expanded')} className="text-white/40 hover:text-white transition-colors">
+                <button onClick={() => handleSetViewState('expanded')} className="text-white/40 hover:text-white transition-colors">
                   <Maximize2 size={14} />
                 </button>
               </div>
@@ -285,7 +317,7 @@ function App() {
                   </div>
                 ))}
               </div>
-              <button onClick={() => { setViewState('expanded'); setIsAddingTask(true) }} className="mt-3 text-xs text-white/40 hover:text-white/70 text-left transition-colors">
+              <button onClick={() => { handleSetViewState('expanded'); setIsAddingTask(true) }} className="mt-3 text-xs text-white/40 hover:text-white/70 text-left transition-colors">
                 Add a task
               </button>
             </div>
@@ -306,7 +338,7 @@ function App() {
               </span>
               <div className="flex items-center gap-3">
                 <span className="text-xs text-white/40">{tasks.filter(t => !t.completed).length} open</span>
-                <button onClick={() => setViewState('hovered')} className="p-1 bg-[#1a1a1a] hover:bg-white/10 rounded-full text-white/70 transition-colors">
+                <button onClick={() => handleSetViewState('hovered')} className="p-1 bg-[#1a1a1a] hover:bg-white/10 rounded-full text-white/70 transition-colors">
                   <X size={14} />
                 </button>
               </div>

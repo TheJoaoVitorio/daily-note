@@ -16,7 +16,7 @@ html, body, #root {
 }
 
 * {
-  font-family: 'Product Sans', 'Google Sans', ui-sans-serif, system-ui, sans-serif !important;
+  font-family: 'Google Sans', ui-sans-serif, system-ui, sans-serif !important;
 }
 
 .custom-scrollbar::-webkit-scrollbar {

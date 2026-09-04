@@ -14,8 +14,8 @@ function createWindow() {
   const primaryDisplay = screen.getPrimaryDisplay()
   const { width } = primaryDisplay.workAreaSize
 
-  const windowWidth = 800
-  const windowHeight = 600
+  const windowWidth = 320
+  const windowHeight = 120
 
   win = new BrowserWindow({
     width: windowWidth,
@@ -44,6 +44,7 @@ import { setupTray } from './modules/tray'
 import { setupStore } from './modules/store'
 import { setupTimer } from './modules/timer'
 import { setupShortcuts, cleanupShortcuts } from './modules/shortcuts'
+import { ipcMain } from 'electron'
 
 app.whenReady().then(() => {
   setupStore()
@@ -51,6 +52,34 @@ app.whenReady().then(() => {
   setupShortcuts()
   createWindow()
   setupTray()
+
+  ipcMain.on('window:resize', (event, state: 'collapsed' | 'hovered' | 'expanded') => {
+    const window = BrowserWindow.fromWebContents(event.sender)
+    if (!window) return
+    const { screen } = require('electron')
+    const { width: screenWidth } = screen.getPrimaryDisplay().workAreaSize
+    
+    let targetWidth = 800
+    let targetHeight = 600
+    
+    if (state === 'collapsed') {
+      targetWidth = 320
+      targetHeight = 120
+    } else if (state === 'hovered') {
+      targetWidth = 600
+      targetHeight = 360
+    } else if (state === 'expanded') {
+      targetWidth = 800
+      targetHeight = 600
+    }
+
+    window.setBounds({
+      x: Math.floor(screenWidth / 2 - targetWidth / 2),
+      y: 0,
+      width: targetWidth,
+      height: targetHeight
+    })
+  })
 })
 
 app.on('window-all-closed', () => {
