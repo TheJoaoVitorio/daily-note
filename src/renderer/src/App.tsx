@@ -559,9 +559,22 @@ function App() {
                   </div>
                 ))}
               </div>
-              <button onClick={() => { handleSetViewState('expanded'); setIsAddingTask(true) }} className="mt-3 text-xs text-white/40 hover:text-white/70 text-left transition-colors">
-                {t('Add a task')}
-              </button>
+              <div className="mt-3 flex items-center gap-2">
+                <button 
+                  onClick={() => { handleSetViewState('expanded'); setIsAddingTask(true) }} 
+                  className="flex items-center gap-1.5 text-xs text-white/60 hover:text-white transition-colors bg-white/5 hover:bg-white/10 px-2.5 py-1.5 rounded-xl font-medium"
+                >
+                  <Plus size={13} className="text-white/70" />
+                  <span>{t('Task')}</span>
+                </button>
+                <button 
+                  onClick={() => { handleSetViewState('expanded'); setShowSettings(true) }} 
+                  className="flex items-center gap-1.5 text-xs text-white/60 hover:text-white transition-colors bg-white/5 hover:bg-white/10 px-2.5 py-1.5 rounded-xl font-medium"
+                >
+                  <Plus size={13} className="text-white/70" />
+                  <span>{t('Category')}</span>
+                </button>
+              </div>
             </div>
 
             {/* Right: Heatmap & Categories Chart */}
@@ -822,12 +835,35 @@ function App() {
                           {t(c.name as any) || c.name}
                         </button>
                       ))}
+                      <button
+                        type="button"
+                        onClick={() => setShowSettings(true)}
+                        className="px-2 py-0.5 rounded-md text-[10px] font-medium flex items-center gap-1 text-white/40 hover:text-white bg-[#1a1a1a] hover:bg-[#222] transition-colors shrink-0"
+                        title={t('Add Category')}
+                      >
+                        <Plus size={11} />
+                        <span>{t('Category')}</span>
+                      </button>
                     </div>
                   </div>
                 ) : (
-                  <button onClick={() => setIsAddingTask(true)} className="w-full bg-[#111111] hover:bg-[#1a1a1a] border border-white/5 rounded-2xl p-4 text-left text-sm text-white/40 transition-colors mt-auto shrink-0 relative z-10">
-                    Add a task
-                  </button>
+                  <div className="flex items-center gap-2 mt-auto shrink-0 relative z-10">
+                    <button 
+                      onClick={() => setIsAddingTask(true)} 
+                      className="flex-1 bg-[#111111] hover:bg-[#1a1a1a] border border-white/5 rounded-2xl p-3.5 text-left text-sm text-white/40 hover:text-white/70 transition-colors flex items-center gap-2 font-medium"
+                    >
+                      <Plus size={15} className="text-white/40" />
+                      <span>{t('Add a task')}</span>
+                    </button>
+                    <button 
+                      onClick={() => setShowSettings(true)} 
+                      className="bg-[#111111] hover:bg-[#1a1a1a] border border-white/5 rounded-2xl p-3.5 text-sm text-white/40 hover:text-white transition-colors flex items-center gap-2 font-medium shrink-0"
+                      title={t('Add Category')}
+                    >
+                      <Plus size={15} className="text-white/40" />
+                      <span>{t('Category')}</span>
+                    </button>
+                  </div>
                 )}
               </div>
             </div>
