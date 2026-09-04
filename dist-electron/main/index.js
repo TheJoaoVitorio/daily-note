@@ -216,7 +216,10 @@ function startTimer(taskId, minutes) {
 	totalTime = minutes * 60;
 	isRunning$1 = true;
 	interval = setInterval(() => {
-		if (timeRemaining > 0) {
+		if (totalTime === 0) {
+			timeRemaining += 1;
+			broadcastTick();
+		} else if (timeRemaining > 0) {
 			timeRemaining -= 1;
 			broadcastTick();
 		} else {

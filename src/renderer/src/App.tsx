@@ -252,6 +252,7 @@ function App() {
       if (window.electron) window.electron.ipcRenderer.send('window:resize', 'expanded')
       setViewState('expanded')
     } else if (newState === 'hovered') {
+      setViewMode('day') // Reset to day view for mini dashboard
       if (viewState === 'collapsed') {
         if (window.electron) window.electron.ipcRenderer.send('window:resize', 'hovered')
         setViewState('hovered')
@@ -267,6 +268,7 @@ function App() {
         }, 500)
       }
     } else if (newState === 'collapsed') {
+      setViewMode('day') // Reset to day view for pill
       setViewState('collapsed')
       setTimeout(() => {
         setViewState(curr => {
@@ -314,12 +316,25 @@ function App() {
         {viewState === 'collapsed' && (
           <div className="flex items-center justify-between px-4 h-full">
             <div className="flex items-center space-x-3 text-white overflow-hidden">
-              <div className={`w-2.5 h-2.5 rounded-full shrink-0 ${isRunning ? 'bg-blue-500' : 'bg-green-400'}`}></div>
+              {isRunning && activeTask && totalTime === 0 ? (
+                <button 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleToggleTask(activeTask.id);
+                    handleStopTimer();
+                  }} 
+                  className="text-white/30 hover:text-white shrink-0 group-hover/radio:text-white"
+                >
+                  <Circle size={18} />
+                </button>
+              ) : (
+                <div className={`w-2.5 h-2.5 rounded-full shrink-0 ${isRunning ? 'bg-blue-500' : 'bg-green-400'}`}></div>
+              )}
               <span className="text-sm font-medium truncate">
                 {isRunning && activeTask ? activeTask.title : 'Ready to Focus'}
               </span>
             </div>
-            {isRunning && (
+            {isRunning && totalTime > 0 && (
               <div className="text-sm font-bold text-white tracking-widest">
                 {formatTime(timeRemaining)}
               </div>
@@ -360,16 +375,14 @@ function App() {
                         <span className={`text-sm font-medium truncate ${t.completed ? 'line-through text-white/40' : 'text-white/90'}`}>{t.title}</span>
                       </div>
                     </div>
-                    {t.date !== 'unscheduled' && (
-                      <button 
-                        onClick={() => isRunning && activeTaskId === t.id ? handleStopTimer() : handleStartTimer(t.id, t.estimatedMinutes)}
-                        className={`w-7 h-7 shrink-0 flex items-center justify-center rounded-full transition-colors ${
-                          isRunning && activeTaskId === t.id ? 'bg-red-500 text-white hover:bg-red-600' : 'bg-blue-600 text-white hover:bg-blue-500'
-                        }`}
-                      >
-                        {isRunning && activeTaskId === t.id ? <Square size={10} fill="currentColor" /> : <Play size={10} fill="currentColor" className="ml-0.5" />}
-                      </button>
-                    )}
+                    <button 
+                      onClick={() => isRunning && activeTaskId === t.id ? handleStopTimer() : handleStartTimer(t.id, t.date === 'unscheduled' ? 0 : t.estimatedMinutes)}
+                      className={`w-7 h-7 shrink-0 flex items-center justify-center rounded-full transition-colors ${
+                        isRunning && activeTaskId === t.id ? 'bg-red-500 text-white hover:bg-red-600' : 'bg-blue-600 text-white hover:bg-blue-500'
+                      }`}
+                    >
+                      {isRunning && activeTaskId === t.id ? <Square size={10} fill="currentColor" /> : <Play size={10} fill="currentColor" className="ml-0.5" />}
+                    </button>
                   </div>
                 ))}
               </div>
@@ -446,7 +459,7 @@ function App() {
                             {viewMode === 'unscheduled' ? <><ListTodo size={12} /> Someday</> : <><CalendarIcon size={12} /> Today</>}
                           </div>
                           
-                          {viewMode === 'day' && (
+                          {viewMode === 'day' ? (
                             <>
                               <button 
                                 onClick={() => setActiveDurationPopover(activeDurationPopover === t.id ? null : t.id)}
@@ -463,6 +476,15 @@ function App() {
                                 {isRunning && activeTaskId === t.id ? <Square size={12} fill="currentColor" /> : <Play size={12} fill="currentColor" className="ml-0.5" />}
                               </button>
                             </>
+                          ) : (
+                            <button 
+                              onClick={() => isRunning && activeTaskId === t.id ? handleStopTimer() : handleStartTimer(t.id, 0)}
+                              className={`w-7 h-7 flex items-center justify-center rounded-full transition-colors ${
+                                isRunning && activeTaskId === t.id ? 'bg-red-500 text-white hover:bg-red-600' : 'bg-blue-600 text-white hover:bg-blue-500'
+                              }`}
+                            >
+                              {isRunning && activeTaskId === t.id ? <Square size={12} fill="currentColor" /> : <Play size={12} fill="currentColor" className="ml-0.5" />}
+                            </button>
                           )}
                           
                           <button onClick={() => handleDeleteTask(t.id)} className="text-white/20 hover:text-red-400 transition-colors"><Trash2 size={14} /></button>

@@ -22,18 +22,23 @@ export function startTimer(taskId: string, minutes: number) {
   isRunning = true
 
   interval = setInterval(() => {
-    if (timeRemaining > 0) {
-      timeRemaining -= 1
+    if (totalTime === 0) {
+      timeRemaining += 1 // Count up elapsed time
       broadcastTick()
     } else {
-      if (currentTaskId) {
-        completeTask(currentTaskId)
-        BrowserWindow.getAllWindows().forEach(win => {
-          win.webContents.send('timer:finished', currentTaskId)
-        })
+      if (timeRemaining > 0) {
+        timeRemaining -= 1
+        broadcastTick()
+      } else {
+        if (currentTaskId) {
+          completeTask(currentTaskId)
+          BrowserWindow.getAllWindows().forEach(win => {
+            win.webContents.send('timer:finished', currentTaskId)
+          })
+        }
+        stopTimer()
+        showNotification('Focus Session Complete!', 'Great job staying focused.')
       }
-      stopTimer()
-      showNotification('Focus Session Complete!', 'Great job staying focused.')
     }
   }, 1000)
 }
