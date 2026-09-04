@@ -281,7 +281,7 @@ function App() {
 
   const handleSetViewState = (newState: 'collapsed' | 'hovered' | 'expanded') => {
     isTransitioningRef.current = true
-    setTimeout(() => { isTransitioningRef.current = false }, 300)
+    setTimeout(() => { isTransitioningRef.current = false }, 500) // increased to match animation duration
 
     if (newState === 'expanded') {
       if (window.electron) window.electron.ipcRenderer.send('window:resize', 'expanded')
@@ -299,7 +299,7 @@ function App() {
             }
             return curr
           })
-        }, 500)
+        }, 300)
       }
     } else if (newState === 'collapsed') {
       setViewState('collapsed')
@@ -310,7 +310,7 @@ function App() {
           }
           return curr
         })
-      }, 500)
+      }, 300)
     }
   }
 
@@ -396,9 +396,17 @@ function App() {
                   <ListTodo size={16} className="text-white/70" />
                   <span className="font-semibold text-sm">{viewMode === 'day' ? t('To do') : t('Unscheduled')}</span>
                 </div>
-                <button onClick={() => handleSetViewState('expanded')} className="text-white/40 hover:text-white transition-colors">
-                  <Maximize2 size={14} />
-                </button>
+                  <button 
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      e.preventDefault()
+                      handleSetViewState('expanded')
+                    }} 
+                    className="text-white/40 hover:text-white transition-colors"
+                    type="button"
+                  >
+                    <Maximize2 size={14} />
+                  </button>
               </div>
               
               <div className="overflow-y-auto space-y-2 custom-scrollbar pr-1 max-h-[116px]">

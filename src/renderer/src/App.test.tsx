@@ -32,4 +32,19 @@ describe('App component', () => {
     }
     vi.useRealTimers()
   })
+
+  it('renders expanded view', () => {
+    vi.useFakeTimers()
+    render(<App />)
+    const pill = screen.getByText('Ready to Focus').closest('.group > div:nth-child(2)')
+    if (pill) {
+      fireEvent.mouseEnter(pill)
+      act(() => { vi.runAllTimers() })
+      const maxBtn = document.querySelector('.lucide-maximize-2')
+      if (maxBtn) {
+        fireEvent.click(maxBtn.closest('button')!)
+      }
+      expect(screen.getByText('Tasks')).toBeDefined()
+    }
+  })
 })
