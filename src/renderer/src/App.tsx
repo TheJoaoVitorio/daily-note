@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react'
 import type { Task, StoreData, ActivityDay } from '../../shared/types'
-import { Play, Square, Calendar as CalendarIcon, Clock, Trash2, Maximize2, X, ChevronLeft, ChevronRight, CheckCircle2, Circle, ChevronUp, ChevronDown, ListTodo, Flame } from 'lucide-react'
+import { Play, Square, Calendar as CalendarIcon, Clock, Trash2, Maximize2, X, ChevronLeft, ChevronRight, CheckCircle2, Circle, ChevronUp, ChevronDown, ListTodo, Flame, Settings } from 'lucide-react'
+import { useTranslation } from './i18n'
 
 const formatDate = (date: Date) => date.toISOString().split('T')[0]
 
@@ -42,6 +43,9 @@ function App() {
   const [tasks, setTasks] = useState<Task[]>([])
   const [activity, setActivity] = useState<ActivityDay[]>([])
   const [unscheduledCount, setUnscheduledCount] = useState(0)
+  const [language, setLanguage] = useState('en')
+  const [showSettings, setShowSettings] = useState(false)
+  const { t } = useTranslation(language)
 
   const [isRunning, setIsRunning] = useState(false)
   const [timeRemaining, setTimeRemaining] = useState(0)
@@ -92,6 +96,7 @@ function App() {
         setTasks(data.tasks)
         setActivity(data.activity)
         setUnscheduledCount(data.unscheduledCount)
+        if (data.language) setLanguage(data.language)
       }).catch(err => console.error("Error loading data:", err))
     }
   }
@@ -233,7 +238,7 @@ function App() {
     for (let i = 0; i < firstDay; i++) days.push(null)
     for (let i = 1; i <= daysInMonth; i++) days.push(new Date(year, month, i))
 
-    const monthName = currentMonth.toLocaleString('default', { month: 'long', year: 'numeric' })
+    const monthName = currentMonth.toLocaleString(language, { month: 'long', year: 'numeric' })
 
     return (
       <div className="flex flex-col h-full bg-[#0a0a0a] rounded-2xl p-4">
@@ -357,7 +362,7 @@ function App() {
                 <div className={`w-2.5 h-2.5 rounded-full shrink-0 ${isRunning ? 'bg-blue-500' : 'bg-green-400'}`}></div>
               )}
               <span className="text-sm font-medium truncate">
-                {isRunning && activeTaskData ? activeTaskData.title : 'Ready to Focus'}
+                {isRunning && activeTaskData ? activeTaskData.title : t('Ready to Focus')}
               </span>
             </div>
             <div className="flex items-center gap-3 shrink-0 ml-3">
@@ -389,7 +394,7 @@ function App() {
               <div className="flex justify-between items-center mb-4 text-white">
                 <div className="flex items-center gap-2">
                   <ListTodo size={16} className="text-white/70" />
-                  <span className="font-semibold text-sm">{viewMode === 'day' ? 'To do' : 'Unscheduled'}</span>
+                  <span className="font-semibold text-sm">{viewMode === 'day' ? t('To do') : t('Unscheduled')}</span>
                 </div>
                 <button onClick={() => handleSetViewState('expanded')} className="text-white/40 hover:text-white transition-colors">
                   <Maximize2 size={14} />
@@ -426,7 +431,7 @@ function App() {
                 ))}
               </div>
               <button onClick={() => { handleSetViewState('expanded'); setIsAddingTask(true) }} className="mt-3 text-xs text-white/40 hover:text-white/70 text-left transition-colors">
-                Add a task
+                {t('Add a task')}
               </button>
             </div>
 
@@ -442,10 +447,10 @@ function App() {
           <div className="flex-1 flex flex-col p-4 animate-in fade-in duration-300">
             <div className="flex justify-between items-center mb-4 px-2 text-white">
               <span className="font-semibold text-sm flex items-center gap-2">
-                <ListTodo size={16} className="text-white/70" /> Tasks
+                <ListTodo size={16} className="text-white/70" /> {t('Tasks')}
               </span>
               <div className="flex items-center gap-3">
-                <span className="text-xs text-white/40">{tasks.filter(t => !t.completed).length} open</span>
+                <span className="text-xs text-white/40">{tasks.filter(t => !t.completed).length} {t('open')}</span>
                 <button onClick={() => handleSetViewState('hovered')} className="p-1 bg-[#1a1a1a] hover:bg-white/10 rounded-full text-white/70 transition-colors">
                   <X size={14} />
                 </button>
@@ -457,16 +462,16 @@ function App() {
 
               <div className="flex flex-col min-h-0 bg-[#0a0a0a] rounded-2xl relative">
                 <div className="flex justify-between items-center mb-4 text-white">
-                  <span className="font-semibold">{viewMode === 'day' ? 'Today' : 'Unscheduled'}</span>
+                  <span className="font-semibold">{viewMode === 'day' ? t('Today') : t('Unscheduled')}</span>
                   <div className="flex bg-[#1a1a1a] rounded-full p-0.5">
                     <button 
                       onClick={() => setViewMode('day')}
                       className={`px-3 py-1 text-xs font-medium rounded-full transition-colors ${viewMode === 'day' ? 'bg-blue-600 text-white' : 'text-white/50 hover:text-white'}`}
-                    >Day</button>
+                    >{t('Day')}</button>
                     <button 
                       onClick={() => setViewMode('unscheduled')}
                       className={`px-3 py-1 text-xs font-medium rounded-full transition-colors ${viewMode === 'unscheduled' ? 'bg-blue-600 text-white' : 'text-white/50 hover:text-white'}`}
-                    >Unscheduled {unscheduledCount > 0 ? unscheduledCount : ''}</button>
+                    >{t('Unscheduled')} {unscheduledCount > 0 ? unscheduledCount : ''}</button>
                   </div>
                 </div>
 
@@ -474,7 +479,7 @@ function App() {
                   {tasks.length === 0 && viewMode === 'unscheduled' && !isAddingTask && (
                     <div className="flex flex-col items-center justify-center h-full text-center p-6 space-y-3 opacity-50 mt-10">
                       <ListTodo size={32} />
-                      <p className="text-sm font-medium">Capture ideas and tasks without a specific date here.</p>
+                      <p className="text-sm font-medium">{t('Capture ideas and tasks without a specific date here.')}</p>
                     </div>
                   )}
                   {tasks.map(t => (
@@ -495,7 +500,7 @@ function App() {
                         </div>
                         <div className="flex items-center gap-3 shrink-0">
                           <div className="flex items-center gap-2 text-xs text-white/40 bg-[#1a1a1a] px-2 py-1 rounded-lg">
-                            {viewMode === 'unscheduled' ? <><ListTodo size={12} /> Someday</> : <><CalendarIcon size={12} /> Today</>}
+                            {viewMode === 'unscheduled' ? <><ListTodo size={12} /> {t('Unscheduled')}</> : <><CalendarIcon size={12} /> {t('Today')}</>}
                           </div>
                           
                           {viewMode === 'day' ? (
@@ -596,6 +601,41 @@ function App() {
                     Add a task
                   </button>
                 )}
+              </div>
+            </div>
+          </div>
+        )}
+        {/* SETTINGS OVERLAY */}
+        {showSettings && (
+          <div className="absolute inset-0 bg-[#0a0a0a]/95 backdrop-blur-md z-[60] p-6 flex flex-col animate-in fade-in duration-200">
+            <div className="flex justify-between items-center mb-8">
+              <span className="font-semibold text-lg text-white flex items-center gap-2">
+                <Settings className="text-white/70" size={18} /> {t('Settings')}
+              </span>
+              <button onClick={() => setShowSettings(false)} className="p-2 hover:bg-white/10 rounded-full text-white/70 transition-colors">
+                <X size={18} />
+              </button>
+            </div>
+            
+            <div className="flex flex-col gap-4">
+              <div className="flex justify-between items-center bg-[#111] border border-white/5 p-4 rounded-2xl">
+                <span className="text-white/90 font-medium">{t('Language')}</span>
+                <div className="flex bg-[#1a1a1a] rounded-xl p-1">
+                  <button 
+                    onClick={() => {
+                      if (window.electron) window.electron.ipcRenderer.invoke('store:updateSetting', 'language', 'en')
+                      setLanguage('en')
+                    }}
+                    className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${language === 'en' ? 'bg-blue-600 text-white' : 'text-white/50 hover:text-white'}`}
+                  >English</button>
+                  <button 
+                    onClick={() => {
+                      if (window.electron) window.electron.ipcRenderer.invoke('store:updateSetting', 'language', 'pt-br')
+                      setLanguage('pt-br')
+                    }}
+                    className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${language === 'pt-br' ? 'bg-blue-600 text-white' : 'text-white/50 hover:text-white'}`}
+                  >Português</button>
+                </div>
               </div>
             </div>
           </div>

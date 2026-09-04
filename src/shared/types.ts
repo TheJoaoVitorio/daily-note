@@ -16,7 +16,8 @@ export interface ActivityDay {
 export interface StoreData {
   tasks: Task[]
   activity: ActivityDay[]
-  focusMinutes: number
   streak: number
+  focusMinutes: number
   unscheduledCount: number
+  language: string
 }

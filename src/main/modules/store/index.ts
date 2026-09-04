@@ -46,6 +46,9 @@ export function setupStore() {
     db.prepare("INSERT INTO settings (key, value) VALUES ('streak', '0')").run()
     db.prepare("INSERT INTO settings (key, value) VALUES ('focusMinutes', '25')").run()
   }
+  if (!getSetting.get('language')) {
+    db.prepare("INSERT INTO settings (key, value) VALUES ('language', 'en')").run()
+  }
 
   // Set up IPC handlers
   ipcMain.handle('store:getData', (_, date: string) => readData(date))
@@ -54,10 +57,11 @@ export function setupStore() {
   ipcMain.handle('store:updateTaskOrder', (_, ids: string[]) => updateTaskOrder(ids))
   ipcMain.handle('store:toggleTask', (_, id: string) => toggleTask(id))
   ipcMain.handle('store:deleteTask', (_, id: string) => deleteTask(id))
+  ipcMain.handle('store:updateSetting', (_, key: string, value: string) => updateSetting(key, value))
 }
 
 export function readData(targetDate: string): StoreData {
-  if (!db) return { tasks: [], activity: [], focusMinutes: 25, streak: 0, unscheduledCount: 0 }
+  if (!db) return { tasks: [], activity: [], focusMinutes: 25, streak: 0, unscheduledCount: 0, language: 'en' }
 
   const tasks = db.prepare('SELECT * FROM tasks WHERE date = ? ORDER BY createdAt ASC').all(targetDate) as any[]
   const mappedTasks: Task[] = tasks.map(t => ({
@@ -69,6 +73,7 @@ export function readData(targetDate: string): StoreData {
 
   const streakRow = db.prepare("SELECT value FROM settings WHERE key = 'streak'").get() as any
   const focusRow = db.prepare("SELECT value FROM settings WHERE key = 'focusMinutes'").get() as any
+  const languageRow = db.prepare("SELECT value FROM settings WHERE key = 'language'").get() as any
 
   const unscheduledCountRow = db.prepare("SELECT COUNT(*) as count FROM tasks WHERE date = 'unscheduled'").get() as any
 
@@ -77,8 +82,16 @@ export function readData(targetDate: string): StoreData {
     activity,
     streak: streakRow ? parseInt(streakRow.value) : 0,
     focusMinutes: focusRow ? parseInt(focusRow.value) : 25,
-    unscheduledCount: unscheduledCountRow ? unscheduledCountRow.count : 0
+    unscheduledCount: unscheduledCountRow ? unscheduledCountRow.count : 0,
+    language: languageRow ? languageRow.value : 'en'
   }
+}
+
+export function updateSetting(key: string, value: string) {
+  db.prepare(`
+    INSERT INTO settings (key, value) VALUES (?, ?)
+    ON CONFLICT(key) DO UPDATE SET value = excluded.value
+  `).run(key, value)
 }
 
 export function addTask(taskData: Omit<Task, 'id' | 'createdAt'>): Task {

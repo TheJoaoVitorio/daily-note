@@ -84,16 +84,19 @@ function setupStore() {
       completedCount INTEGER DEFAULT 0
     );
   `);
-	if (!db.prepare("SELECT value FROM settings WHERE key = ?").get("streak")) {
+	const getSetting = db.prepare("SELECT value FROM settings WHERE key = ?");
+	if (!getSetting.get("streak")) {
 		db.prepare("INSERT INTO settings (key, value) VALUES ('streak', '0')").run();
 		db.prepare("INSERT INTO settings (key, value) VALUES ('focusMinutes', '25')").run();
 	}
+	if (!getSetting.get("language")) db.prepare("INSERT INTO settings (key, value) VALUES ('language', 'en')").run();
 	electron.ipcMain.handle("store:getData", (_, date) => readData(date));
 	electron.ipcMain.handle("store:addTask", (_, task) => addTask(task));
 	electron.ipcMain.handle("store:updateTask", (_, id, updates) => updateTask(id, updates));
 	electron.ipcMain.handle("store:updateTaskOrder", (_, ids) => updateTaskOrder(ids));
 	electron.ipcMain.handle("store:toggleTask", (_, id) => toggleTask(id));
 	electron.ipcMain.handle("store:deleteTask", (_, id) => deleteTask(id));
+	electron.ipcMain.handle("store:updateSetting", (_, key, value) => updateSetting(key, value));
 }
 function readData(targetDate) {
 	if (!db) return {
@@ -101,7 +104,8 @@ function readData(targetDate) {
 		activity: [],
 		focusMinutes: 25,
 		streak: 0,
-		unscheduledCount: 0
+		unscheduledCount: 0,
+		language: "en"
 	};
 	const mappedTasks = db.prepare("SELECT * FROM tasks WHERE date = ? ORDER BY createdAt ASC").all(targetDate).map((t) => ({
 		...t,
@@ -110,14 +114,22 @@ function readData(targetDate) {
 	const activity = db.prepare("SELECT date, completedCount FROM activity ORDER BY date DESC LIMIT 60").all();
 	const streakRow = db.prepare("SELECT value FROM settings WHERE key = 'streak'").get();
 	const focusRow = db.prepare("SELECT value FROM settings WHERE key = 'focusMinutes'").get();
+	const languageRow = db.prepare("SELECT value FROM settings WHERE key = 'language'").get();
 	const unscheduledCountRow = db.prepare("SELECT COUNT(*) as count FROM tasks WHERE date = 'unscheduled'").get();
 	return {
 		tasks: mappedTasks,
 		activity,
 		streak: streakRow ? parseInt(streakRow.value) : 0,
 		focusMinutes: focusRow ? parseInt(focusRow.value) : 25,
-		unscheduledCount: unscheduledCountRow ? unscheduledCountRow.count : 0
+		unscheduledCount: unscheduledCountRow ? unscheduledCountRow.count : 0,
+		language: languageRow ? languageRow.value : "en"
 	};
+}
+function updateSetting(key, value) {
+	db.prepare(`
+    INSERT INTO settings (key, value) VALUES (?, ?)
+    ON CONFLICT(key) DO UPDATE SET value = excluded.value
+  `).run(key, value);
 }
 function addTask(taskData) {
 	const newTask = {
