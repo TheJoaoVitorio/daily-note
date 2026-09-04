@@ -129,16 +129,6 @@ function App() {
     if (window.electron) window.electron.ipcRenderer.invoke('timer:start', id, minutes)
   }
 
-  const handleStartUnscheduled = (id: string) => {
-    if (window.electron) {
-      const today = formatDate(new Date())
-      window.electron.ipcRenderer.invoke('store:updateTask', id, { date: today }).then(() => {
-        loadData(viewMode === 'day' ? selectedDate : 'unscheduled')
-        handleStartTimer(id, 0)
-      })
-    }
-  }
-
   const handleStopTimer = () => {
     setActiveTaskId(null)
     if (window.electron) window.electron.ipcRenderer.invoke('timer:stop')
@@ -292,7 +282,6 @@ function App() {
       if (window.electron) window.electron.ipcRenderer.send('window:resize', 'expanded')
       setViewState('expanded')
     } else if (newState === 'hovered') {
-      setViewMode('day') // Reset to day view for mini dashboard
       if (viewState === 'collapsed') {
         if (window.electron) window.electron.ipcRenderer.send('window:resize', 'hovered')
         setViewState('hovered')
@@ -308,7 +297,6 @@ function App() {
         }, 500)
       }
     } else if (newState === 'collapsed') {
-      setViewMode('day') // Reset to day view for pill
       setViewState('collapsed')
       setTimeout(() => {
         setViewState(curr => {
@@ -401,7 +389,7 @@ function App() {
               <div className="flex justify-between items-center mb-4 text-white">
                 <div className="flex items-center gap-2">
                   <ListTodo size={16} className="text-white/70" />
-                  <span className="font-semibold text-sm">To do</span>
+                  <span className="font-semibold text-sm">{viewMode === 'day' ? 'To do' : 'Unscheduled'}</span>
                 </div>
                 <button onClick={() => handleSetViewState('expanded')} className="text-white/40 hover:text-white transition-colors">
                   <Maximize2 size={14} />
@@ -529,7 +517,7 @@ function App() {
                             </>
                           ) : (
                             <button 
-                              onClick={() => isRunning && activeTaskId === t.id ? handleStopTimer() : handleStartUnscheduled(t.id)}
+                              onClick={() => isRunning && activeTaskId === t.id ? handleStopTimer() : handleStartTimer(t.id, 0)}
                               className={`w-7 h-7 flex items-center justify-center rounded-full transition-colors ${
                                 isRunning && activeTaskId === t.id ? 'bg-red-500 text-white hover:bg-red-600' : 'bg-blue-600 text-white hover:bg-blue-500'
                               }`}
