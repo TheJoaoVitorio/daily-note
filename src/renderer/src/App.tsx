@@ -366,11 +366,24 @@ function App() {
                 {isRunning && activeTaskData ? activeTaskData.title : 'Ready to Focus'}
               </span>
             </div>
-            {isRunning && totalTime > 0 && (
-              <div className="text-sm font-bold text-white tracking-widest">
-                {formatTime(timeRemaining)}
-              </div>
-            )}
+            <div className="flex items-center gap-3 shrink-0 ml-3">
+              {isRunning && totalTime > 0 && (
+                <div className="text-sm font-bold text-white tracking-widest">
+                  {formatTime(timeRemaining)}
+                </div>
+              )}
+              <button 
+                onClick={(e) => {
+                  e.stopPropagation()
+                  if (hoverTimeout) clearTimeout(hoverTimeout)
+                  handleSetViewState('hovered')
+                }}
+                className="text-white/20 hover:text-white/60 transition-colors p-1"
+                title="Expand"
+              >
+                <ChevronDown size={14} />
+              </button>
+            </div>
           </div>
         )}
 
