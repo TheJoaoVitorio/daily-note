@@ -451,6 +451,9 @@ function App() {
               </span>
               <div className="flex items-center gap-3">
                 <span className="text-xs text-white/40">{tasks.filter(t => !t.completed).length} {t('open')}</span>
+                <button onClick={() => setShowSettings(true)} className="p-1 hover:bg-white/10 rounded-full text-white/70 transition-colors">
+                  <Settings size={14} />
+                </button>
                 <button onClick={() => handleSetViewState('hovered')} className="p-1 bg-[#1a1a1a] hover:bg-white/10 rounded-full text-white/70 transition-colors">
                   <X size={14} />
                 </button>
