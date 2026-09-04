@@ -1,3 +1,17 @@
+export interface Category {
+  id: string
+  name: string
+  color: string
+  createdAt: number
+}
+
+export interface CategoryStat {
+  categoryId: string
+  name: string
+  color: string
+  completedCount: number
+}
+
 export interface Task {
   id: string
   title: string
@@ -6,6 +20,7 @@ export interface Task {
   date: string // YYYY-MM-DD
   createdAt: number
   completedAt?: number
+  categoryId?: string | null
 }
 
 export interface ActivityDay {
@@ -20,4 +35,6 @@ export interface StoreData {
   focusMinutes: number
   unscheduledCount: number
   language: string
+  categories: Category[]
+  categoryStats: CategoryStat[]
 }

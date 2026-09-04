@@ -46,5 +46,31 @@ describe('App component', () => {
       }
       expect(screen.getByText('Tasks')).toBeDefined()
     }
+    vi.useRealTimers()
+  })
+
+  it('renders category chart in hovered state and categories in settings', () => {
+    vi.useFakeTimers()
+    render(<App />)
+    const pill = screen.getByText('Ready to Focus').closest('.group > div:nth-child(2)')
+    if (pill) {
+      fireEvent.mouseEnter(pill)
+      act(() => { vi.runAllTimers() })
+      expect(screen.getByText('Completed by Category')).toBeDefined()
+
+      // Open expanded
+      const maxBtn = document.querySelector('.lucide-maximize-2')
+      if (maxBtn) {
+        fireEvent.click(maxBtn.closest('button')!)
+      }
+      // Open settings
+      const settingsBtn = document.querySelector('.lucide-settings')
+      if (settingsBtn) {
+        fireEvent.click(settingsBtn.closest('button')!)
+      }
+      expect(screen.getByText('Categories')).toBeDefined()
+      expect(screen.getByPlaceholderText('Category name')).toBeDefined()
+    }
+    vi.useRealTimers()
   })
 })

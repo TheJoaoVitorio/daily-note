@@ -73,7 +73,14 @@ function setupStore() {
       estimatedMinutes INTEGER DEFAULT 25,
       date TEXT NOT NULL,
       createdAt INTEGER NOT NULL,
-      completedAt INTEGER
+      completedAt INTEGER,
+      categoryId TEXT
+    );
+    CREATE TABLE IF NOT EXISTS categories (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      color TEXT NOT NULL,
+      createdAt INTEGER NOT NULL
     );
     CREATE TABLE IF NOT EXISTS settings (
       key TEXT PRIMARY KEY,
@@ -84,6 +91,18 @@ function setupStore() {
       completedCount INTEGER DEFAULT 0
     );
   `);
+	try {
+		db.exec("ALTER TABLE tasks ADD COLUMN categoryId TEXT;");
+	} catch (_) {}
+	const catCountRow = db.prepare("SELECT COUNT(*) as count FROM categories").get();
+	if (!catCountRow || catCountRow.count === 0) {
+		const insertCat = db.prepare("INSERT INTO categories (id, name, color, createdAt) VALUES (?, ?, ?, ?)");
+		const now = Date.now();
+		insertCat.run("cat-work", "Work", "#3B82F6", now);
+		insertCat.run("cat-study", "Study", "#8B5CF6", now + 1);
+		insertCat.run("cat-health", "Health", "#10B981", now + 2);
+		insertCat.run("cat-personal", "Personal", "#F59E0B", now + 3);
+	}
 	const getSetting = db.prepare("SELECT value FROM settings WHERE key = ?");
 	if (!getSetting.get("streak")) {
 		db.prepare("INSERT INTO settings (key, value) VALUES ('streak', '0')").run();
@@ -97,6 +116,8 @@ function setupStore() {
 	electron.ipcMain.handle("store:toggleTask", (_, id) => toggleTask(id));
 	electron.ipcMain.handle("store:deleteTask", (_, id) => deleteTask(id));
 	electron.ipcMain.handle("store:updateSetting", (_, key, value) => updateSetting(key, value));
+	electron.ipcMain.handle("store:addCategory", (_, category) => addCategory(category));
+	electron.ipcMain.handle("store:deleteCategory", (_, id) => deleteCategory(id));
 }
 function readData(targetDate) {
 	if (!db) return {
@@ -105,7 +126,9 @@ function readData(targetDate) {
 		focusMinutes: 25,
 		streak: 0,
 		unscheduledCount: 0,
-		language: "en"
+		language: "en",
+		categories: [],
+		categoryStats: []
 	};
 	const mappedTasks = db.prepare("SELECT * FROM tasks WHERE date = ? ORDER BY createdAt ASC").all(targetDate).map((t) => ({
 		...t,
@@ -116,13 +139,27 @@ function readData(targetDate) {
 	const focusRow = db.prepare("SELECT value FROM settings WHERE key = 'focusMinutes'").get();
 	const languageRow = db.prepare("SELECT value FROM settings WHERE key = 'language'").get();
 	const unscheduledCountRow = db.prepare("SELECT COUNT(*) as count FROM tasks WHERE date = 'unscheduled'").get();
+	const categories = db.prepare("SELECT * FROM categories ORDER BY createdAt ASC").all();
+	const categoryStats = db.prepare(`
+    SELECT 
+      c.id as categoryId,
+      c.name,
+      c.color,
+      COUNT(t.id) as completedCount
+    FROM categories c
+    LEFT JOIN tasks t ON t.categoryId = c.id AND t.completed = 1
+    GROUP BY c.id
+    ORDER BY completedCount DESC, c.createdAt ASC
+  `).all();
 	return {
 		tasks: mappedTasks,
 		activity,
 		streak: streakRow ? parseInt(streakRow.value) : 0,
 		focusMinutes: focusRow ? parseInt(focusRow.value) : 25,
 		unscheduledCount: unscheduledCountRow ? unscheduledCountRow.count : 0,
-		language: languageRow ? languageRow.value : "en"
+		language: languageRow ? languageRow.value : "en",
+		categories,
+		categoryStats
 	};
 }
 function updateSetting(key, value) {
@@ -131,6 +168,24 @@ function updateSetting(key, value) {
     ON CONFLICT(key) DO UPDATE SET value = excluded.value
   `).run(key, value);
 }
+function addCategory(categoryData) {
+	const newCategory = {
+		id: "cat-" + Math.random().toString(36).substring(2, 9),
+		name: categoryData.name.trim(),
+		color: categoryData.color,
+		createdAt: Date.now()
+	};
+	db.prepare(`
+    INSERT INTO categories (id, name, color, createdAt)
+    VALUES (@id, @name, @color, @createdAt)
+  `).run(newCategory);
+	return newCategory;
+}
+function deleteCategory(id) {
+	db.prepare("UPDATE tasks SET categoryId = NULL WHERE categoryId = ?").run(id);
+	db.prepare("DELETE FROM categories WHERE id = ?").run(id);
+	return true;
+}
 function addTask(taskData) {
 	const newTask = {
 		...taskData,
@@ -138,11 +193,12 @@ function addTask(taskData) {
 		createdAt: Date.now()
 	};
 	db.prepare(`
-    INSERT INTO tasks (id, title, completed, estimatedMinutes, date, createdAt)
-    VALUES (@id, @title, @completed, @estimatedMinutes, @date, @createdAt)
+    INSERT INTO tasks (id, title, completed, estimatedMinutes, date, createdAt, categoryId)
+    VALUES (@id, @title, @completed, @estimatedMinutes, @date, @createdAt, @categoryId)
   `).run({
 		...newTask,
-		completed: newTask.completed ? 1 : 0
+		completed: newTask.completed ? 1 : 0,
+		categoryId: newTask.categoryId || null
 	});
 	return newTask;
 }
@@ -150,6 +206,7 @@ function updateTask(id, updates) {
 	if (!db.prepare("SELECT * FROM tasks WHERE id = ?").get(id)) return null;
 	if (updates.estimatedMinutes !== void 0) db.prepare("UPDATE tasks SET estimatedMinutes = ? WHERE id = ?").run(updates.estimatedMinutes, id);
 	if (updates.title !== void 0) db.prepare("UPDATE tasks SET title = ? WHERE id = ?").run(updates.title, id);
+	if (updates.categoryId !== void 0) db.prepare("UPDATE tasks SET categoryId = ? WHERE id = ?").run(updates.categoryId, id);
 	const updatedRow = db.prepare("SELECT * FROM tasks WHERE id = ?").get(id);
 	return {
 		...updatedRow,

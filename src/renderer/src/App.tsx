@@ -1,9 +1,20 @@
 import React, { useState, useEffect, useRef } from 'react'
-import type { Task, StoreData, ActivityDay } from '../../shared/types'
-import { Play, Square, Calendar as CalendarIcon, Clock, Trash2, Maximize2, X, ChevronLeft, ChevronRight, CheckCircle2, Circle, ChevronUp, ChevronDown, ListTodo, Flame, Settings } from 'lucide-react'
+import type { Task, StoreData, ActivityDay, Category, CategoryStat } from '../../shared/types'
+import { Play, Square, Calendar as CalendarIcon, Clock, Trash2, Maximize2, X, ChevronLeft, ChevronRight, CheckCircle2, Circle, ChevronUp, ChevronDown, ListTodo, Flame, Settings, Tag, Plus, Check } from 'lucide-react'
 import { useTranslation } from './i18n'
 
 const formatDate = (date: Date) => date.toISOString().split('T')[0]
+
+const CATEGORY_COLORS = [
+  '#3B82F6', // Blue
+  '#8B5CF6', // Purple
+  '#10B981', // Emerald
+  '#F59E0B', // Amber
+  '#F43F5E', // Rose
+  '#06B6D4', // Cyan
+  '#6366F1', // Indigo
+  '#EC4899', // Pink
+]
 
 const Heatmap = ({ activity }: { activity: ActivityDay[] }) => {
   const days = []
@@ -37,6 +48,66 @@ const Heatmap = ({ activity }: { activity: ActivityDay[] }) => {
   )
 }
 
+const CategoryChart = ({ 
+  categoryStats, 
+  t 
+}: { 
+  categoryStats: CategoryStat[]
+  t: (key: any) => string 
+}) => {
+  const totalCompleted = categoryStats.reduce((sum, s) => sum + s.completedCount, 0)
+  const activeStats = categoryStats.filter(s => s.completedCount > 0)
+
+  return (
+    <div className="flex flex-col w-full mt-2 pt-2 border-t border-white/5">
+      <div className="flex items-center justify-between mb-1.5">
+        <span className="text-[10px] font-semibold text-white/80 flex items-center gap-1">
+          <Tag size={11} className="text-white/50" /> {t('Completed by Category')}
+        </span>
+        <span className="text-[9px] text-white/40 font-medium">
+          {totalCompleted} {t('completed')}
+        </span>
+      </div>
+
+      {totalCompleted === 0 ? (
+        <div className="text-[10px] text-white/30 italic py-1.5 text-center">
+          {t('No completed tasks yet')}
+        </div>
+      ) : (
+        <div className="flex flex-col gap-1.5">
+          <div className="h-1.5 w-full bg-[#1a1a1a] rounded-full overflow-hidden flex">
+            {activeStats.map(s => {
+              const pct = (s.completedCount / totalCompleted) * 100
+              return (
+                <div 
+                  key={s.categoryId} 
+                  style={{ width: `${pct}%`, backgroundColor: s.color }}
+                  className="h-full transition-all duration-300"
+                  title={`${s.name}: ${s.completedCount} (${Math.round(pct)}%)`}
+                />
+              )
+            })}
+          </div>
+
+          <div className="flex flex-col gap-1 max-h-[70px] overflow-y-auto custom-scrollbar pr-0.5">
+            {categoryStats.map(s => (
+              <div key={s.categoryId} className="flex items-center justify-between text-[10px]">
+                <div className="flex items-center gap-1.5 truncate max-w-[125px]">
+                  <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: s.color }} />
+                  <span className="truncate text-white/80">{t(s.name as any) || s.name}</span>
+                </div>
+                <span className="text-[10px] font-semibold text-white/60 ml-1 shrink-0">
+                  {s.completedCount}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 function App() {
   const [selectedDate, setSelectedDate] = useState(formatDate(new Date()))
   const [viewMode, setViewMode] = useState<'day' | 'unscheduled'>('day')
@@ -44,6 +115,11 @@ function App() {
   const [activity, setActivity] = useState<ActivityDay[]>([])
   const [unscheduledCount, setUnscheduledCount] = useState(0)
   const [language, setLanguage] = useState('en')
+  const [categories, setCategories] = useState<Category[]>([])
+  const [categoryStats, setCategoryStats] = useState<CategoryStat[]>([])
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null)
+  const [newCategoryName, setNewCategoryName] = useState('')
+  const [newCategoryColor, setNewCategoryColor] = useState(CATEGORY_COLORS[0])
   const [showSettings, setShowSettings] = useState(false)
   const { t } = useTranslation(language)
 
@@ -97,8 +173,29 @@ function App() {
         setActivity(data.activity)
         setUnscheduledCount(data.unscheduledCount)
         if (data.language) setLanguage(data.language)
+        if (data.categories) setCategories(data.categories)
+        if (data.categoryStats) setCategoryStats(data.categoryStats)
       }).catch(err => console.error("Error loading data:", err))
     }
+  }
+
+  const handleAddCategory = () => {
+    if (!newCategoryName.trim() || !window.electron) return
+    window.electron.ipcRenderer.invoke('store:addCategory', {
+      name: newCategoryName.trim(),
+      color: newCategoryColor
+    }).then(() => {
+      setNewCategoryName('')
+      loadData(viewMode === 'day' ? selectedDate : 'unscheduled')
+    })
+  }
+
+  const handleDeleteCategory = (id: string) => {
+    if (!window.electron) return
+    window.electron.ipcRenderer.invoke('store:deleteCategory', id).then(() => {
+      if (selectedCategoryId === id) setSelectedCategoryId(null)
+      loadData(viewMode === 'day' ? selectedDate : 'unscheduled')
+    })
   }
 
   useEffect(() => {
@@ -146,12 +243,14 @@ function App() {
         title: newTaskTitle,
         completed: false,
         estimatedMinutes: newTaskMinutes,
-        date: viewMode === 'unscheduled' ? 'unscheduled' : selectedDate
+        date: viewMode === 'unscheduled' ? 'unscheduled' : selectedDate,
+        categoryId: selectedCategoryId
       }
       window.electron.ipcRenderer.invoke('store:addTask', task).then(() => {
         loadData(viewMode === 'day' ? selectedDate : 'unscheduled')
         setNewTaskTitle('')
         setNewTaskSubtext('')
+        setSelectedCategoryId(null)
         setIsAddingTask(false)
       }).catch(err => {
         console.error("Failed to add task:", err)
@@ -425,6 +524,16 @@ function App() {
                       </button>
                       <div className="flex flex-col truncate">
                         <span className={`text-sm font-medium truncate ${task.completed ? 'line-through text-white/40' : 'text-white/90'}`}>{task.title}</span>
+                        {task.categoryId && (() => {
+                          const cat = categories.find(c => c.id === task.categoryId)
+                          if (!cat) return null
+                          return (
+                            <span className="flex items-center gap-1 text-[10px] mt-0.5" style={{ color: cat.color }}>
+                              <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: cat.color }} />
+                              {t(cat.name as any) || cat.name}
+                            </span>
+                          )
+                        })()}
                       </div>
                     </div>
                     <button 
@@ -443,9 +552,10 @@ function App() {
               </button>
             </div>
 
-            {/* Right: Heatmap */}
-            <div className="w-[180px] shrink-0 pt-1">
+            {/* Right: Heatmap & Categories Chart */}
+            <div className="w-[180px] shrink-0 pt-1 flex flex-col justify-between">
               <Heatmap activity={activity} />
+              <CategoryChart categoryStats={categoryStats} t={t} />
             </div>
           </div>
         )}
@@ -509,7 +619,24 @@ function App() {
                           </button>
                           <span className={`text-sm font-medium truncate ${task.completed ? 'line-through text-white/40' : 'text-white/90'}`}>{task.title}</span>
                         </div>
-                        <div className="flex items-center gap-3 shrink-0">
+                        <div className="flex items-center gap-2 shrink-0">
+                          {task.categoryId && (() => {
+                            const cat = categories.find(c => c.id === task.categoryId)
+                            if (!cat) return null
+                            return (
+                              <span 
+                                className="flex items-center gap-1.5 text-xs px-2 py-1 rounded-lg border" 
+                                style={{ 
+                                  backgroundColor: `${cat.color}15`, 
+                                  color: cat.color, 
+                                  borderColor: `${cat.color}30` 
+                                }}
+                              >
+                                <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: cat.color }} />
+                                {t(cat.name as any) || cat.name}
+                              </span>
+                            )
+                          })()}
                           <div className="flex items-center gap-2 text-xs text-white/40 bg-[#1a1a1a] px-2 py-1 rounded-lg">
                             {viewMode === 'unscheduled' ? <><ListTodo size={12} /> {t('Unscheduled')}</> : <><CalendarIcon size={12} /> {t('Today')}</>}
                           </div>
@@ -578,7 +705,7 @@ function App() {
                 </div>
 
                 {isAddingTask ? (
-                  <div className="bg-[#111111] p-3 rounded-2xl border border-white/10 flex flex-col gap-3 mt-auto shrink-0 relative z-10">
+                  <div className="bg-[#111111] p-3 rounded-2xl border border-white/10 flex flex-col gap-2.5 mt-auto shrink-0 relative z-10">
                     <div className="flex gap-2">
                       <input 
                         autoFocus
@@ -606,6 +733,39 @@ function App() {
                         Cancel
                       </button>
                     </div>
+                    {/* Category Selector Chips */}
+                    <div className="flex items-center gap-1.5 overflow-x-auto custom-scrollbar py-0.5">
+                      <span className="text-[10px] text-white/40 uppercase tracking-wider font-semibold mr-1 shrink-0">{t('Category')}:</span>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedCategoryId(null)}
+                        className={`px-2 py-0.5 rounded-md text-[10px] font-medium transition-colors shrink-0 ${
+                          selectedCategoryId === null ? 'bg-white/20 text-white' : 'bg-[#1a1a1a] text-white/40 hover:text-white'
+                        }`}
+                      >
+                        {t('No category')}
+                      </button>
+                      {categories.map(c => (
+                        <button
+                          key={c.id}
+                          type="button"
+                          onClick={() => setSelectedCategoryId(c.id)}
+                          className={`px-2 py-0.5 rounded-md text-[10px] font-medium flex items-center gap-1 transition-all shrink-0 ${
+                            selectedCategoryId === c.id 
+                              ? 'text-white border' 
+                              : 'bg-[#1a1a1a] text-white/60 hover:text-white'
+                          }`}
+                          style={{
+                            backgroundColor: selectedCategoryId === c.id ? `${c.color}25` : undefined,
+                            borderColor: selectedCategoryId === c.id ? c.color : 'transparent',
+                            color: selectedCategoryId === c.id ? c.color : undefined
+                          }}
+                        >
+                          <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: c.color }} />
+                          {t(c.name as any) || c.name}
+                        </button>
+                      ))}
+                    </div>
                   </div>
                 ) : (
                   <button onClick={() => setIsAddingTask(true)} className="w-full bg-[#111111] hover:bg-[#1a1a1a] border border-white/5 rounded-2xl p-4 text-left text-sm text-white/40 transition-colors mt-auto shrink-0 relative z-10">
@@ -628,7 +788,7 @@ function App() {
               </button>
             </div>
             
-            <div className="flex flex-col gap-4">
+            <div className="flex-1 overflow-y-auto custom-scrollbar flex flex-col gap-4 pr-1">
               <div className="flex justify-between items-center bg-[#111] border border-white/5 p-4 rounded-2xl">
                 <span className="text-white/90 font-medium">{t('Language')}</span>
                 <div className="flex bg-[#1a1a1a] rounded-xl p-1">
@@ -646,6 +806,76 @@ function App() {
                     }}
                     className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${language === 'pt-br' ? 'bg-blue-600 text-white' : 'text-white/50 hover:text-white'}`}
                   >Português</button>
+                </div>
+              </div>
+
+              {/* Categories Management */}
+              <div className="flex flex-col gap-3 bg-[#111] border border-white/5 p-4 rounded-2xl">
+                <div className="flex justify-between items-center">
+                  <span className="text-white/90 font-medium flex items-center gap-2">
+                    <Tag size={16} className="text-white/60" /> {t('Categories')}
+                  </span>
+                  <span className="text-xs text-white/40">{categories.length}</span>
+                </div>
+
+                {/* Existing Categories List */}
+                <div className="flex flex-col gap-2 max-h-[160px] overflow-y-auto custom-scrollbar pr-1">
+                  {categories.map(cat => (
+                    <div key={cat.id} className="flex items-center justify-between bg-[#1a1a1a] px-3 py-2 rounded-xl border border-white/5">
+                      <div className="flex items-center gap-2.5">
+                        <span className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: cat.color }} />
+                        <span className="text-sm text-white/90 font-medium">{t(cat.name as any) || cat.name}</span>
+                      </div>
+                      <button 
+                        onClick={() => handleDeleteCategory(cat.id)}
+                        className="text-white/30 hover:text-red-400 p-1 rounded-lg transition-colors"
+                        title={t('Delete category') || 'Delete'}
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Add Category Form */}
+                <div className="flex flex-col gap-3 pt-3 border-t border-white/5">
+                  <span className="text-xs font-medium text-white/60">{t('New category')}</span>
+                  <div className="flex gap-2">
+                    <input 
+                      type="text"
+                      placeholder={t('Category name')}
+                      value={newCategoryName}
+                      onChange={(e) => setNewCategoryName(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && handleAddCategory()}
+                      className="flex-1 bg-[#1a1a1a] rounded-xl px-3 py-2 text-xs text-white placeholder-white/30 outline-none border border-white/5 focus:border-white/20 transition-colors"
+                    />
+                    <button
+                      onClick={handleAddCategory}
+                      disabled={!newCategoryName.trim()}
+                      className="bg-blue-600 hover:bg-blue-500 disabled:opacity-40 disabled:hover:bg-blue-600 text-white px-3 py-2 rounded-xl text-xs font-medium transition-colors flex items-center gap-1"
+                    >
+                      <Plus size={14} /> {t('Add Category')}
+                    </button>
+                  </div>
+                  {/* Color picker */}
+                  <div className="flex items-center gap-2 pt-1">
+                    <span className="text-[10px] text-white/40 uppercase tracking-wider font-semibold">Color:</span>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      {CATEGORY_COLORS.map(color => (
+                        <button
+                          key={color}
+                          type="button"
+                          onClick={() => setNewCategoryColor(color)}
+                          className="w-5 h-5 rounded-full flex items-center justify-center transition-transform hover:scale-110 relative"
+                          style={{ backgroundColor: color }}
+                        >
+                          {newCategoryColor === color && (
+                            <Check size={12} className="text-white drop-shadow-md stroke-[3]" />
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>

@@ -2,7 +2,7 @@ import { app, ipcMain } from 'electron'
 import { join } from 'path'
 import { mkdirSync, existsSync } from 'fs'
 import Database from 'better-sqlite3'
-import type { StoreData, Task, ActivityDay } from '../../../shared/types'
+import type { StoreData, Task, ActivityDay, Category, CategoryStat } from '../../../shared/types'
 
 let db: ReturnType<typeof Database>
 
@@ -28,7 +28,14 @@ export function setupStore() {
       estimatedMinutes INTEGER DEFAULT 25,
       date TEXT NOT NULL,
       createdAt INTEGER NOT NULL,
-      completedAt INTEGER
+      completedAt INTEGER,
+      categoryId TEXT
+    );
+    CREATE TABLE IF NOT EXISTS categories (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      color TEXT NOT NULL,
+      createdAt INTEGER NOT NULL
     );
     CREATE TABLE IF NOT EXISTS settings (
       key TEXT PRIMARY KEY,
@@ -39,6 +46,24 @@ export function setupStore() {
       completedCount INTEGER DEFAULT 0
     );
   `)
+
+  // Migrate tasks table to ensure categoryId column exists
+  try {
+    db.exec('ALTER TABLE tasks ADD COLUMN categoryId TEXT;')
+  } catch (_) {
+    // Column already exists
+  }
+
+  // Seed default categories if table is empty
+  const catCountRow = db.prepare('SELECT COUNT(*) as count FROM categories').get() as any
+  if (!catCountRow || catCountRow.count === 0) {
+    const insertCat = db.prepare('INSERT INTO categories (id, name, color, createdAt) VALUES (?, ?, ?, ?)')
+    const now = Date.now()
+    insertCat.run('cat-work', 'Work', '#3B82F6', now)
+    insertCat.run('cat-study', 'Study', '#8B5CF6', now + 1)
+    insertCat.run('cat-health', 'Health', '#10B981', now + 2)
+    insertCat.run('cat-personal', 'Personal', '#F59E0B', now + 3)
+  }
 
   // Initialize settings if empty
   const getSetting = db.prepare('SELECT value FROM settings WHERE key = ?')
@@ -58,10 +83,12 @@ export function setupStore() {
   ipcMain.handle('store:toggleTask', (_, id: string) => toggleTask(id))
   ipcMain.handle('store:deleteTask', (_, id: string) => deleteTask(id))
   ipcMain.handle('store:updateSetting', (_, key: string, value: string) => updateSetting(key, value))
+  ipcMain.handle('store:addCategory', (_, category: { name: string, color: string }) => addCategory(category))
+  ipcMain.handle('store:deleteCategory', (_, id: string) => deleteCategory(id))
 }
 
 export function readData(targetDate: string): StoreData {
-  if (!db) return { tasks: [], activity: [], focusMinutes: 25, streak: 0, unscheduledCount: 0, language: 'en' }
+  if (!db) return { tasks: [], activity: [], focusMinutes: 25, streak: 0, unscheduledCount: 0, language: 'en', categories: [], categoryStats: [] }
 
   const tasks = db.prepare('SELECT * FROM tasks WHERE date = ? ORDER BY createdAt ASC').all(targetDate) as any[]
   const mappedTasks: Task[] = tasks.map(t => ({
@@ -77,13 +104,29 @@ export function readData(targetDate: string): StoreData {
 
   const unscheduledCountRow = db.prepare("SELECT COUNT(*) as count FROM tasks WHERE date = 'unscheduled'").get() as any
 
+  const categories = db.prepare('SELECT * FROM categories ORDER BY createdAt ASC').all() as Category[]
+
+  const categoryStats = db.prepare(`
+    SELECT 
+      c.id as categoryId,
+      c.name,
+      c.color,
+      COUNT(t.id) as completedCount
+    FROM categories c
+    LEFT JOIN tasks t ON t.categoryId = c.id AND t.completed = 1
+    GROUP BY c.id
+    ORDER BY completedCount DESC, c.createdAt ASC
+  `).all() as CategoryStat[]
+
   return {
     tasks: mappedTasks,
     activity,
     streak: streakRow ? parseInt(streakRow.value) : 0,
     focusMinutes: focusRow ? parseInt(focusRow.value) : 25,
     unscheduledCount: unscheduledCountRow ? unscheduledCountRow.count : 0,
-    language: languageRow ? languageRow.value : 'en'
+    language: languageRow ? languageRow.value : 'en',
+    categories,
+    categoryStats
   }
 }
 
@@ -94,6 +137,28 @@ export function updateSetting(key: string, value: string) {
   `).run(key, value)
 }
 
+export function addCategory(categoryData: { name: string, color: string }): Category {
+  const newCategory: Category = {
+    id: 'cat-' + Math.random().toString(36).substring(2, 9),
+    name: categoryData.name.trim(),
+    color: categoryData.color,
+    createdAt: Date.now()
+  }
+
+  db.prepare(`
+    INSERT INTO categories (id, name, color, createdAt)
+    VALUES (@id, @name, @color, @createdAt)
+  `).run(newCategory)
+
+  return newCategory
+}
+
+export function deleteCategory(id: string): boolean {
+  db.prepare('UPDATE tasks SET categoryId = NULL WHERE categoryId = ?').run(id)
+  db.prepare('DELETE FROM categories WHERE id = ?').run(id)
+  return true
+}
+
 export function addTask(taskData: Omit<Task, 'id' | 'createdAt'>): Task {
   const newTask: Task = {
     ...taskData,
@@ -102,11 +167,12 @@ export function addTask(taskData: Omit<Task, 'id' | 'createdAt'>): Task {
   }
 
   db.prepare(`
-    INSERT INTO tasks (id, title, completed, estimatedMinutes, date, createdAt)
-    VALUES (@id, @title, @completed, @estimatedMinutes, @date, @createdAt)
+    INSERT INTO tasks (id, title, completed, estimatedMinutes, date, createdAt, categoryId)
+    VALUES (@id, @title, @completed, @estimatedMinutes, @date, @createdAt, @categoryId)
   `).run({
     ...newTask,
-    completed: newTask.completed ? 1 : 0
+    completed: newTask.completed ? 1 : 0,
+    categoryId: newTask.categoryId || null
   })
 
   return newTask
@@ -122,6 +188,10 @@ export function updateTask(id: string, updates: Partial<Task>): Task | null {
   
   if (updates.title !== undefined) {
     db.prepare('UPDATE tasks SET title = ? WHERE id = ?').run(updates.title, id)
+  }
+
+  if (updates.categoryId !== undefined) {
+    db.prepare('UPDATE tasks SET categoryId = ? WHERE id = ?').run(updates.categoryId, id)
   }
 
   const updatedRow = db.prepare('SELECT * FROM tasks WHERE id = ?').get(id) as any
