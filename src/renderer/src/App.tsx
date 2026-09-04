@@ -360,14 +360,16 @@ function App() {
                         <span className={`text-sm font-medium truncate ${t.completed ? 'line-through text-white/40' : 'text-white/90'}`}>{t.title}</span>
                       </div>
                     </div>
-                    <button 
-                      onClick={() => isRunning && activeTaskId === t.id ? handleStopTimer() : handleStartTimer(t.id, t.estimatedMinutes)}
-                      className={`w-7 h-7 shrink-0 flex items-center justify-center rounded-full transition-colors ${
-                        isRunning && activeTaskId === t.id ? 'bg-red-500 text-white hover:bg-red-600' : 'bg-blue-600 text-white hover:bg-blue-500'
-                      }`}
-                    >
-                      {isRunning && activeTaskId === t.id ? <Square size={10} fill="currentColor" /> : <Play size={10} fill="currentColor" className="ml-0.5" />}
-                    </button>
+                    {t.date !== 'unscheduled' && (
+                      <button 
+                        onClick={() => isRunning && activeTaskId === t.id ? handleStopTimer() : handleStartTimer(t.id, t.estimatedMinutes)}
+                        className={`w-7 h-7 shrink-0 flex items-center justify-center rounded-full transition-colors ${
+                          isRunning && activeTaskId === t.id ? 'bg-red-500 text-white hover:bg-red-600' : 'bg-blue-600 text-white hover:bg-blue-500'
+                        }`}
+                      >
+                        {isRunning && activeTaskId === t.id ? <Square size={10} fill="currentColor" /> : <Play size={10} fill="currentColor" className="ml-0.5" />}
+                      </button>
+                    )}
                   </div>
                 ))}
               </div>
@@ -443,20 +445,26 @@ function App() {
                           <div className="flex items-center gap-2 text-xs text-white/40 bg-[#1a1a1a] px-2 py-1 rounded-lg">
                             {viewMode === 'unscheduled' ? <><ListTodo size={12} /> Someday</> : <><CalendarIcon size={12} /> Today</>}
                           </div>
-                          <button 
-                            onClick={() => setActiveDurationPopover(activeDurationPopover === t.id ? null : t.id)}
-                            className="flex items-center gap-2 text-xs text-white/40 bg-[#1a1a1a] hover:bg-[#222] transition-colors px-2 py-1 rounded-lg"
-                          >
-                            <Clock size={12} /> {t.estimatedMinutes}m
-                          </button>
-                          <button 
-                            onClick={() => isRunning && activeTaskId === t.id ? handleStopTimer() : handleStartTimer(t.id, t.estimatedMinutes)}
-                            className={`w-7 h-7 flex items-center justify-center rounded-full transition-colors ${
-                              isRunning && activeTaskId === t.id ? 'bg-red-500 text-white hover:bg-red-600' : 'bg-blue-600 text-white hover:bg-blue-500'
-                            }`}
-                          >
-                            {isRunning && activeTaskId === t.id ? <Square size={12} fill="currentColor" /> : <Play size={12} fill="currentColor" className="ml-0.5" />}
-                          </button>
+                          
+                          {viewMode === 'day' && (
+                            <>
+                              <button 
+                                onClick={() => setActiveDurationPopover(activeDurationPopover === t.id ? null : t.id)}
+                                className="flex items-center gap-2 text-xs text-white/40 bg-[#1a1a1a] hover:bg-[#222] transition-colors px-2 py-1 rounded-lg"
+                              >
+                                <Clock size={12} /> {t.estimatedMinutes}m
+                              </button>
+                              <button 
+                                onClick={() => isRunning && activeTaskId === t.id ? handleStopTimer() : handleStartTimer(t.id, t.estimatedMinutes)}
+                                className={`w-7 h-7 flex items-center justify-center rounded-full transition-colors ${
+                                  isRunning && activeTaskId === t.id ? 'bg-red-500 text-white hover:bg-red-600' : 'bg-blue-600 text-white hover:bg-blue-500'
+                                }`}
+                              >
+                                {isRunning && activeTaskId === t.id ? <Square size={12} fill="currentColor" /> : <Play size={12} fill="currentColor" className="ml-0.5" />}
+                              </button>
+                            </>
+                          )}
+                          
                           <button onClick={() => handleDeleteTask(t.id)} className="text-white/20 hover:text-red-400 transition-colors"><Trash2 size={14} /></button>
                         </div>
                       </div>
