@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import type { Task, StoreData, ActivityDay } from '../../shared/types'
 import { Play, Square, Calendar as CalendarIcon, Clock, Trash2, Maximize2, X, ChevronLeft, ChevronRight, CheckCircle2, Circle, ChevronUp, ChevronDown, ListTodo, Flame } from 'lucide-react'
 
@@ -285,6 +285,9 @@ function App() {
   }
 
   const handleSetViewState = (newState: 'collapsed' | 'hovered' | 'expanded') => {
+    isTransitioningRef.current = true
+    setTimeout(() => { isTransitioningRef.current = false }, 300)
+
     if (newState === 'expanded') {
       if (window.electron) window.electron.ipcRenderer.send('window:resize', 'expanded')
       setViewState('expanded')
