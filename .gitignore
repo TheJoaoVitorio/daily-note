@@ -1,5 +1,33 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build & distribution outputs
+dist/
+dist-electron/
+dist-ssr/
+release/
+build/
+out/
+*.tsbuildinfo
+
+# Local databases & storage (SQLite)
+*.sqlite
+*.sqlite3
+*.sqlite-journal
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+
+# Environment & local configuration
+.env
+.env.local
+.env.*.local
+*.local
+
 # Logs
-logs
+logs/
 *.log
 npm-debug.log*
 yarn-debug.log*
@@ -7,18 +35,35 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-node_modules
-dist
-dist-ssr
-*.local
+# Testing & coverage
+coverage/
+.nyc_output/
 
-# Editor directories and files
+# IDE & editor configuration
 .vscode/*
 !.vscode/extensions.json
-.idea
-.DS_Store
+!.vscode/settings.json
+.idea/
 *.suo
 *.ntvs*
 *.njsproj
 *.sln
 *.sw?
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+
+# Scratch & temporary files
+scratch/
+tmp/
+temp/
+
+specs.md
+references/

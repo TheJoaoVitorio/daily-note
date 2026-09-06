@@ -53,7 +53,7 @@ const CategoryChart = ({
   t 
 }: { 
   categoryStats: CategoryStat[]
-  t: (key: any) => string 
+  t: (key: string) => string 
 }) => {
   const totalCompleted = categoryStats.reduce((sum, s) => sum + s.completedCount, 0)
   const activeStats = categoryStats.filter(s => s.completedCount > 0)
@@ -350,18 +350,23 @@ function App() {
     for (let i = 1; i <= daysInMonth; i++) days.push(new Date(year, month, i))
 
     const monthName = currentMonth.toLocaleString(language, { month: 'long', year: 'numeric' })
+    const weekDays = language === 'pt-br' 
+      ? ['D', 'S', 'T', 'Q', 'Q', 'S', 'S'] 
+      : ['S', 'M', 'T', 'W', 'T', 'F', 'S']
 
     return (
-      <div className="flex flex-col h-full bg-[#0a0a0a] rounded-2xl p-4">
-        <div className="flex justify-between items-center mb-6 px-2">
-          <button onClick={() => setCurrentMonth(new Date(year, month - 1, 1))} className="p-1.5 bg-[#1a1a1a] hover:bg-white/10 rounded-full text-white/70"><ChevronLeft size={14} /></button>
-          <span className="font-semibold text-sm text-white">{monthName}</span>
-          <button onClick={() => setCurrentMonth(new Date(year, month + 1, 1))} className="p-1.5 bg-[#1a1a1a] hover:bg-white/10 rounded-full text-white/70"><ChevronRight size={14} /></button>
+      <div className="flex flex-col h-full bg-[#0a0a0a] rounded-2xl p-4 min-w-0">
+        <div className="flex justify-between items-center mb-5 px-1">
+          <button onClick={() => setCurrentMonth(new Date(year, month - 1, 1))} className="p-1.5 bg-[#1a1a1a] hover:bg-white/10 rounded-full text-white/70 transition-colors shrink-0"><ChevronLeft size={14} /></button>
+          <span className="font-semibold text-sm text-white capitalize truncate px-1">{monthName}</span>
+          <button onClick={() => setCurrentMonth(new Date(year, month + 1, 1))} className="p-1.5 bg-[#1a1a1a] hover:bg-white/10 rounded-full text-white/70 transition-colors shrink-0"><ChevronRight size={14} /></button>
         </div>
-        <div className="grid grid-cols-7 gap-y-4 gap-x-2 text-center text-[10px] uppercase tracking-wider mb-2 text-white/40 font-medium">
-          <div>S</div><div>M</div><div>T</div><div>W</div><div>T</div><div>F</div><div>S</div>
+        <div className="grid grid-cols-7 gap-y-3 gap-x-1 text-center text-[10px] uppercase tracking-wider mb-2 text-white/40 font-medium">
+          {weekDays.map((wd, idx) => (
+            <div key={idx}>{wd}</div>
+          ))}
         </div>
-        <div className="grid grid-cols-7 gap-y-2 gap-x-2 text-center text-sm font-medium">
+        <div className="grid grid-cols-7 gap-y-2 gap-x-1 text-center text-xs font-medium">
           {days.map((d, i) => {
             if (!d) return <div key={i}></div>
             const dateStr = formatDate(d)
@@ -371,8 +376,8 @@ function App() {
               <button 
                 key={i} 
                 onClick={() => setSelectedDate(dateStr)}
-                className={`w-8 h-8 rounded-full flex items-center justify-center transition-colors mx-auto ${
-                  isSelected ? 'bg-blue-600 text-white' : 'hover:bg-white/10 text-white/80'
+                className={`w-7 h-7 rounded-full flex items-center justify-center transition-colors mx-auto ${
+                  isSelected ? 'bg-blue-600 text-white font-semibold' : 'hover:bg-white/10 text-white/80'
                 }`}
               >
                 {d.getDate()}
@@ -381,7 +386,7 @@ function App() {
           })}
         </div>
         
-        <div className="mt-auto">
+        <div className="mt-auto pt-2">
           <button onClick={() => setSelectedDate(formatDate(new Date()))} className="w-full py-2 bg-[#1a1a1a] hover:bg-[#222] rounded-xl text-xs font-medium text-white transition-colors">
             {t('Today')}
           </button>
@@ -426,8 +431,8 @@ function App() {
   }
 
   let containerClass = "w-64 h-12"
-  if (viewState === 'hovered') containerClass = "w-[540px] h-[270px]"
-  if (viewState === 'expanded') containerClass = "w-[760px] h-[550px]"
+  if (viewState === 'hovered') containerClass = "w-[580px] h-[320px]"
+  if (viewState === 'expanded') containerClass = "w-[840px] h-[580px]"
 
   return (
     <div className="w-full h-full flex justify-center pt-1 select-none relative group text-white">
@@ -520,7 +525,7 @@ function App() {
                   </button>
               </div>
               
-              <div className="overflow-y-auto space-y-2 custom-scrollbar pr-1 max-h-[116px]">
+              <div className="overflow-y-auto space-y-2 custom-scrollbar pr-1 max-h-[150px]">
                 {tasks.map(task => (
                   <div 
                     key={task.id} 
@@ -530,19 +535,19 @@ function App() {
                     onDragOver={(e) => handleDragOver(e, task.id)}
                     className={`bg-[#1a1a1a] p-3 rounded-xl flex items-center justify-between group cursor-grab active:cursor-grabbing ${draggedTaskId === task.id ? 'opacity-50 border border-blue-500/30' : ''}`}
                   >
-                    <div className="flex items-center gap-3 overflow-hidden">
+                    <div className="flex items-center gap-3 min-w-0 flex-1 overflow-hidden">
                       <button onClick={() => handleToggleTask(task.id)} className="text-white/30 hover:text-white shrink-0">
                         {task.completed ? <CheckCircle2 size={18} className="text-blue-500" /> : <Circle size={18} />}
                       </button>
-                      <div className="flex flex-col truncate">
+                      <div className="flex flex-col truncate min-w-0">
                         <span className={`text-sm font-medium truncate ${task.completed ? 'line-through text-white/40' : 'text-white/90'}`}>{task.title}</span>
                         {task.categoryId && (() => {
                           const cat = categories.find(c => c.id === task.categoryId)
                           if (!cat) return null
                           return (
-                            <span className="flex items-center gap-1 text-[10px] mt-0.5" style={{ color: cat.color }}>
-                              <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: cat.color }} />
-                              {t(cat.name as any) || cat.name}
+                            <span className="flex items-center gap-1 text-[10px] mt-0.5 truncate" style={{ color: cat.color }}>
+                              <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: cat.color }} />
+                              <span className="truncate">{t(cat.name as any) || cat.name}</span>
                             </span>
                           )
                         })()}
@@ -559,7 +564,7 @@ function App() {
                   </div>
                 ))}
               </div>
-              <div className="mt-3 flex items-center gap-2">
+              <div className="mt-auto pt-3 flex items-center gap-2">
                 <button 
                   onClick={() => { handleSetViewState('expanded'); setIsAddingTask(true) }} 
                   className="flex items-center gap-1.5 text-xs text-white/60 hover:text-white transition-colors bg-white/5 hover:bg-white/10 px-2.5 py-1.5 rounded-xl font-medium"
@@ -578,7 +583,7 @@ function App() {
             </div>
 
             {/* Right: Heatmap & Categories Chart */}
-            <div className="w-[180px] shrink-0 pt-1 flex flex-col justify-between">
+            <div className="w-[190px] shrink-0 pt-1 flex flex-col justify-between">
               <Heatmap activity={activity} />
               <CategoryChart categoryStats={categoryStats} t={t} />
             </div>
@@ -587,14 +592,14 @@ function App() {
 
         {/* EXPANDED STATE (FULL DASHBOARD) */}
         {viewState === 'expanded' && (
-          <div className="flex-1 flex flex-col p-5 animate-in fade-in duration-300">
-            <div className="flex justify-between items-center mb-3 px-1 text-white">
+          <div className="flex-1 flex flex-col p-5 min-h-0 min-w-0 animate-in fade-in duration-300">
+            <div className="flex justify-between items-center mb-3 px-1 text-white shrink-0">
               <span className="font-semibold text-sm flex items-center gap-2">
                 <ListTodo size={16} className="text-white/70" /> {t('Tasks')}
               </span>
               <div className="flex items-center gap-3">
                 <span className="text-xs text-white/40">{tasks.filter(t => !t.completed).length} {t('open')}</span>
-                <button onClick={() => setShowSettings(true)} className="p-1 hover:bg-white/10 rounded-full text-white/70 transition-colors">
+                <button onClick={() => setShowSettings(true)} className="p-1 hover:bg-white/10 rounded-full text-white/70 transition-colors" title={t('Settings')}>
                   <Settings size={14} />
                 </button>
                 <button onClick={() => handleSetViewState('hovered')} className="p-1 bg-[#1a1a1a] hover:bg-white/10 rounded-full text-white/70 transition-colors">
@@ -603,11 +608,11 @@ function App() {
               </div>
             </div>
 
-            <div className="flex-1 grid grid-cols-[260px_1fr] gap-4 min-h-0">
+            <div className="flex-1 grid grid-cols-[270px_1fr] gap-4 min-h-0 min-w-0 overflow-hidden">
               {renderCalendar()}
 
-              <div className="flex flex-col min-h-0 bg-[#0a0a0a] rounded-2xl p-4 relative">
-                <div className="flex justify-between items-center mb-3 text-white">
+              <div className="flex flex-col min-h-0 min-w-0 bg-[#0a0a0a] rounded-2xl p-4 relative overflow-hidden">
+                <div className="flex justify-between items-center mb-3 text-white shrink-0">
                   <span className="font-semibold">{viewMode === 'day' ? t('Today') : t('Unscheduled')}</span>
                   <div className="flex bg-[#1a1a1a] rounded-full p-0.5">
                     <button 
@@ -637,8 +642,8 @@ function App() {
                       onDragEnd={handleDragEnd}
                       onDragOver={(e) => handleDragOver(e, task.id)}
                     >
-                      <div className={`bg-[#111111] border border-white/5 hover:border-white/10 p-3 rounded-2xl flex items-center justify-between group transition-colors cursor-grab active:cursor-grabbing ${draggedTaskId === task.id ? 'opacity-50 border border-blue-500/30' : ''}`}>
-                        <div className="flex items-center gap-3 overflow-hidden">
+                      <div className={`bg-[#111111] border border-white/5 hover:border-white/10 p-3 rounded-2xl flex items-center justify-between gap-3 group transition-colors cursor-grab active:cursor-grabbing ${draggedTaskId === task.id ? 'opacity-50 border border-blue-500/30' : ''}`}>
+                        <div className="flex items-center gap-3 min-w-0 flex-1 overflow-hidden">
                           <button onClick={() => handleToggleTask(task.id)} className="text-white/30 hover:text-white shrink-0">
                             {task.completed ? <CheckCircle2 size={18} className="text-blue-500" /> : <Circle size={18} />}
                           </button>
@@ -804,7 +809,7 @@ function App() {
                       </button>
                     </div>
                     {/* Category Selector Chips */}
-                    <div className="flex items-center gap-1.5 overflow-x-auto custom-scrollbar py-0.5">
+                    <div className="flex items-center gap-1.5 overflow-x-auto custom-scrollbar py-1 pr-1 max-w-full">
                       <span className="text-[10px] text-white/40 uppercase tracking-wider font-semibold mr-1 shrink-0">{t('Category')}:</span>
                       <button
                         type="button"

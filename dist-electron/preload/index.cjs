@@ -1,1 +1,0 @@
-let e=require("electron");e.contextBridge.exposeInMainWorld(`electron`,{ipcRenderer:{send:(t,...n)=>e.ipcRenderer.send(t,...n),invoke:(t,...n)=>e.ipcRenderer.invoke(t,...n),on:(t,n)=>{e.ipcRenderer.on(t,(e,...t)=>n(...t))}}});

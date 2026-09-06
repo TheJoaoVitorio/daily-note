@@ -14,8 +14,8 @@ export function setupStore() {
 
   // Create DB in project folder during dev, or AppData in production
   const dbPath = app.isPackaged 
-    ? join(userDataPath, 'daily-notch.sqlite')
-    : join(process.cwd(), 'daily-notch.sqlite')
+    ? join(userDataPath, 'daily-note.sqlite')
+    : join(process.cwd(), 'daily-note.sqlite')
     
   db = new Database(dbPath)
 

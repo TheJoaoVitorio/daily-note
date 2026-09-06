@@ -19,7 +19,7 @@ describe('App component', () => {
       act(() => {
         vi.runAllTimers()
       })
-      expect(pill.className).toContain('w-[540px]') // Hovered width
+      expect(pill.className).toContain('w-[580px]') // Hovered width
 
       // In hovered state, 'Journey Streak' should be visible
       expect(screen.getByText(/Journey Streak/)).toBeDefined()

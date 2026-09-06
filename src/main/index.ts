@@ -12,7 +12,7 @@ let win: BrowserWindow | null = null
 function createWindow() {
   const { screen } = require('electron')
   const primaryDisplay = screen.getPrimaryDisplay()
-  const { width } = primaryDisplay.workAreaSize
+  const { x: displayX, y: displayY, width } = primaryDisplay.workArea
 
   const windowWidth = 320
   const windowHeight = 120
@@ -20,8 +20,8 @@ function createWindow() {
   win = new BrowserWindow({
     width: windowWidth,
     height: windowHeight,
-    x: Math.floor(width / 2 - windowWidth / 2),
-    y: 0,
+    x: Math.floor(displayX + width / 2 - windowWidth / 2),
+    y: displayY,
     frame: false,
     transparent: true,
     alwaysOnTop: true,
@@ -56,25 +56,26 @@ app.whenReady().then(() => {
     const window = BrowserWindow.fromWebContents(event.sender)
     if (!window) return
     const { screen } = require('electron')
-    const { width: screenWidth } = screen.getPrimaryDisplay().workAreaSize
+    const currentDisplay = screen.getDisplayMatching(window.getBounds())
+    const { x: displayX, y: displayY, width: displayWidth } = currentDisplay.workArea
     
-    let targetWidth = 800
-    let targetHeight = 600
+    let targetWidth = 880
+    let targetHeight = 640
     
     if (state === 'collapsed') {
       targetWidth = 320
       targetHeight = 120
     } else if (state === 'hovered') {
-      targetWidth = 600
-      targetHeight = 360
+      targetWidth = 620
+      targetHeight = 380
     } else if (state === 'expanded') {
-      targetWidth = 800
-      targetHeight = 620
+      targetWidth = 880
+      targetHeight = 640
     }
 
     window.setBounds({
-      x: Math.floor(screenWidth / 2 - targetWidth / 2),
-      y: 0,
+      x: Math.floor(displayX + displayWidth / 2 - targetWidth / 2),
+      y: displayY,
       width: targetWidth,
       height: targetHeight
     })

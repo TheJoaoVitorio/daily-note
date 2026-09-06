@@ -57,7 +57,7 @@ export const translations: Translations = {
 export function useTranslation(language: string) {
   const lang = language.toLowerCase() === 'pt-br' ? 'pt-br' : 'en'
   
-  const t = (key: keyof typeof translations) => {
+  const t = (key: string): string => {
     return translations[key]?.[lang] || key
   }
   
