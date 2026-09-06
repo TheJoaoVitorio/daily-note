@@ -3,7 +3,7 @@
 A minimalist, floating notch-style task manager and focus timer built for desktop. It stays out of your way at the top of your screen, expanding into a full daily planner and category dashboard when you need it.
 
 <div align="center">
-  <img src="assets/preview-expanded.png" alt="Daily Note Expanded Dashboard" width="720" />
+  <img src="assets/DailyNote.png" alt="Daily Note — Your tasks, always within reach" width="840" />
 </div>
 
 ---
