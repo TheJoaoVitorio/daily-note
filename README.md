@@ -2,15 +2,23 @@
 
 A minimalist, floating notch-style task manager and focus timer built for desktop. It stays out of your way at the top of your screen, expanding into a full daily planner and category dashboard when you need it.
 
+<div align="center">
+  <img src="assets/preview-expanded.png" alt="Daily Note Expanded Dashboard" width="720" />
+</div>
+
 ---
 
 ## Overview
 
 Daily Note is designed around the concept of an ambient desktop notch (inspired by Dynamic Island). Instead of keeping a full-sized productivity app open all day, Daily Note lives as a compact pill that transitions between three states depending on what you're doing:
 
-- **Collapsed (Ambient Pill)**: A 320×120 unobtrusive bar showing the active task, live countdown, and focus status.
-- **Hovered (Quick Glance)**: Expands on hover into a 580×320 card with your daily to-do items, current streak, a 60-day GitHub-style activity heatmap, and a completion-by-category chart.
-- **Expanded (Full Dashboard)**: An 880×640 full workspace with an interactive monthly calendar, scheduled day view, unscheduled inbox, task reordering, category manager, and focus duration controls.
+### Interface States
+
+| State | Description | Preview |
+| :--- | :--- | :--- |
+| **Collapsed** | 320×120 unobtrusive bar showing the active task, live countdown, and focus progress. | <img src="assets/preview-collapsed.png" alt="Collapsed Pill" width="240" /> |
+| **Hovered** | 580×320 card showing daily to-dos, 60-day activity heatmap, and category completion chart. | <img src="assets/preview-hovered.png" alt="Hovered Glance" width="420" /> |
+| **Expanded** | 880×640 full workspace with interactive monthly calendar, scheduled day view, unscheduled inbox, category management, and duration controls. | <img src="assets/preview-expanded.png" alt="Expanded Dashboard" width="420" /> |
 
 All data is stored locally in SQLite. No accounts, no telemetry, and 100% offline.
 
