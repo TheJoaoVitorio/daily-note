@@ -32,3 +32,23 @@ html, body, #root {
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
   background: rgba(255, 255, 255, 0.2);
 }
+
+@keyframes marquee {
+  0%, 15% {
+    transform: translateX(0%);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.animate-marquee {
+  display: flex;
+  width: max-content;
+  animation: marquee var(--marquee-duration, 12s) linear infinite;
+}
+
+.marquee-mask {
+  mask-image: linear-gradient(to right, transparent 0%, black 4px, black calc(100% - 10px), transparent 100%);
+  -webkit-mask-image: linear-gradient(to right, transparent 0%, black 4px, black calc(100% - 10px), transparent 100%);
+}

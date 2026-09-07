@@ -108,6 +108,72 @@ const CategoryChart = ({
   )
 }
 
+const MarqueeText = ({ 
+  text, 
+  className = "text-sm font-medium text-white" 
+}: { 
+  text: string
+  className?: string 
+}) => {
+  const containerRef = useRef<HTMLDivElement>(null)
+  const textRef = useRef<HTMLSpanElement>(null)
+  const [shouldAnimate, setShouldAnimate] = useState(false)
+  const [duration, setDuration] = useState(10)
+
+  useEffect(() => {
+    const updateMarquee = () => {
+      if (containerRef.current && textRef.current) {
+        const containerWidth = containerRef.current.clientWidth
+        const textWidth = textRef.current.scrollWidth
+        if (textWidth > containerWidth && containerWidth > 0) {
+          setShouldAnimate(true)
+          const calculatedDuration = Math.max(6, Math.round(textWidth / 30))
+          setDuration(calculatedDuration)
+        } else {
+          setShouldAnimate(false)
+        }
+      }
+    }
+
+    updateMarquee()
+
+    if (typeof ResizeObserver !== 'undefined' && containerRef.current) {
+      const ro = new ResizeObserver(() => updateMarquee())
+      ro.observe(containerRef.current)
+      return () => ro.disconnect()
+    }
+  }, [text])
+
+  if (!shouldAnimate) {
+    return (
+      <div ref={containerRef} className="overflow-hidden min-w-0 flex-1">
+        <span ref={textRef} className={`truncate block ${className}`}>
+          {text}
+        </span>
+      </div>
+    )
+  }
+
+  return (
+    <div 
+      ref={containerRef} 
+      className="overflow-hidden min-w-0 flex-1 relative marquee-mask pl-0.5"
+    >
+      <div 
+        className="flex w-max will-change-transform animate-marquee"
+        style={{ '--marquee-duration': `${duration}s` } as React.CSSProperties}
+      >
+        <span ref={textRef} className={`shrink-0 pr-8 whitespace-nowrap ${className}`}>
+          {text}
+        </span>
+        <span className={`shrink-0 pr-8 whitespace-nowrap ${className}`} aria-hidden="true">
+          {text}
+        </span>
+      </div>
+    </div>
+  )
+}
+
 function App() {
   const [selectedDate, setSelectedDate] = useState(formatDate(new Date()))
   const [viewMode, setViewMode] = useState<'day' | 'unscheduled'>('day')
@@ -462,7 +528,7 @@ function App() {
         {/* COLLAPSED STATE (PILL) */}
         {viewState === 'collapsed' && (
           <div className="flex items-center justify-between px-4 h-full">
-            <div className="flex items-center space-x-3 text-white overflow-hidden">
+            <div className="flex items-center space-x-3 text-white overflow-hidden flex-1 min-w-0 mr-2">
               {isRunning && activeTaskData && totalTime === 0 ? (
                 <button 
                   onClick={(e) => {
@@ -477,11 +543,11 @@ function App() {
               ) : (
                 <div className={`w-2.5 h-2.5 rounded-full shrink-0 ${isRunning ? 'bg-blue-500' : 'bg-green-400'}`}></div>
               )}
-              <span className="text-sm font-medium truncate">
-                {isRunning && activeTaskData ? activeTaskData.title : t('Ready to Focus')}
-              </span>
+              <MarqueeText 
+                text={isRunning && activeTaskData ? activeTaskData.title : t('Ready to Focus')} 
+              />
             </div>
-            <div className="flex items-center gap-3 shrink-0 ml-3">
+            <div className="flex items-center gap-3 shrink-0 ml-1">
               {isRunning && totalTime > 0 && (
                 <div className="text-sm font-bold text-white tracking-widest">
                   {formatTime(timeRemaining)}
