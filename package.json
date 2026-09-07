@@ -1,11 +1,16 @@
 {
-  "name": "app",
+  "name": "daily-note",
+  "productName": "Daily Note",
+  "version": "1.0.0",
+  "description": "Minimalist ambient desktop notch task manager and focus timer",
+  "author": "João Vitório",
   "private": true,
-  "version": "0.0.0",
   "main": "dist-electron/main/index.js",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "dist": "npm run build && electron-builder",
+    "dist:dir": "npm run build && electron-builder --dir",
     "lint": "oxlint",
     "preview": "vite preview"
   },
@@ -26,6 +31,7 @@
     "@vitejs/plugin-react": "^6.1.0",
     "autoprefixer": "^10.5.4",
     "electron": "^44.1.0",
+    "electron-builder": "^26.15.3",
     "jsdom": "^29.1.1",
     "oxlint": "^1.79.0",
     "postcss": "^8.5.26",
@@ -35,5 +41,40 @@
     "vite-plugin-electron": "^1.1.2",
     "vite-plugin-electron-renderer": "^1.0.0",
     "vitest": "^4.1.11"
+  },
+  "build": {
+    "appId": "com.thejoaovitorio.dailynote",
+    "productName": "Daily Note",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "dist-electron/**/*",
+      "public/**/*"
+    ],
+    "asarUnpack": [
+      "**/node_modules/better-sqlite3/**"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "assets/icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "shortcutName": "Daily Note",
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "deleteAppDataOnUninstall": false
+    }
   }
 }

@@ -104,6 +104,15 @@ npm run build
 
 The output will be generated in `dist/` (web renderer) and `dist-electron/` (main process and preloads).
 
+### Packaging Windows Installer (.exe)
+
+```bash
+# Build and package the production installer
+npm run dist
+```
+
+The setup executable will be generated in `release/Daily Note Setup 1.0.0.exe` ready for distribution.
+
 ---
 
 ## Project Structure
