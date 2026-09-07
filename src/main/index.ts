@@ -26,6 +26,7 @@ function createWindow() {
     transparent: true,
     alwaysOnTop: true,
     skipTaskbar: true,
+    icon: getAppIconPath(),
     webPreferences: {
       preload: join(__dirname, '../preload/index.cjs'),
     },
@@ -39,7 +40,7 @@ function createWindow() {
   }
 }
 
-import { setupTray } from './modules/tray'
+import { setupTray, getAppIconPath } from './modules/tray'
 import { setupStore } from './modules/store'
 import { setupTimer } from './modules/timer'
 import { setupShortcuts, cleanupShortcuts } from './modules/shortcuts'
